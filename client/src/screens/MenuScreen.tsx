@@ -1,125 +1,195 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePokerStore } from '../store/pokerStore';
 import { AIType } from '../types';
+import { toastError } from '../components/Toast';
+import { SFX } from '../services/SoundManager';
 
 const SUIT_ICONS = ['♠', '♥', '♦', '♣'];
 
 const AI_OPTIONS = [
-  { value: AIType.RANDOM,           label: 'Random',          desc: 'Makes random legal moves. Good for testing.',   icon: '🎲', color: 'text-gray-300' },
-  { value: AIType.TIGHT_PASSIVE,    label: 'Tight Passive',   desc: 'Plays few hands, mostly calls. Low pressure.',  icon: '🐢', color: 'text-blue-300' },
-  { value: AIType.LOOSE_AGGRESSIVE, label: 'Loose Aggressive',desc: 'Plays many hands, raises often. Very active.',  icon: '🔥', color: 'text-orange-300' },
-  { value: AIType.PROBABILITY,      label: 'Probability-Based',desc: 'Uses equity & position. Closest to real play.', icon: '🧠', color: 'text-purple-300' },
+  { value: AIType.RANDOM,           label: 'Random',           desc: 'Makes random legal moves.',          icon: '🎲', color: '#9ca3af' },
+  { value: AIType.TIGHT_PASSIVE,    label: 'Tight Passive',    desc: 'Plays few hands, mostly calls.',     icon: '🐢', color: '#93c5fd' },
+  { value: AIType.LOOSE_AGGRESSIVE, label: 'Loose Aggressive', desc: 'Raises often, very active.',         icon: '🔥', color: '#fdba74' },
+  { value: AIType.PROBABILITY,      label: 'Probability-Based',desc: 'Uses equity & position. Realistic.', icon: '🧠', color: '#c4b5fd' },
 ];
+
+// Removed unused URLs
+
+// Removed unused getShareUrl
 
 export const MenuScreen: React.FC = () => {
   const { createRoom, joinRoom, error, clearError, connected } = usePokerStore();
-  const [tab, setTab] = useState<'create' | 'join'>('create');
-  const [name, setName] = useState('');
-  const [joinCode, setJoinCode] = useState('');
+
+  // Read ?join= from URL → auto-switch to join tab and pre-fill code
+  const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const urlJoinCode = urlParams.get('join')?.toUpperCase() ?? '';
+
+  const [tab, setTab] = useState<'create' | 'join'>(urlJoinCode ? 'join' : 'create');
+  const [name, setName] = useState(() => {
+    try { return localStorage.getItem('poker_player_name') || ''; } catch { return ''; }
+  });
+  const [joinCode, setJoinCode]     = useState(urlJoinCode);
   const [smallBlind, setSmallBlind] = useState(10);
-  const [bigBlind, setBigBlind] = useState(20);
+  const [bigBlind, setBigBlind]     = useState(20);
   const [startStack, setStartStack] = useState(1000);
-  const [numAI, setNumAI] = useState(2);
-  const [aiType, setAiType] = useState<AIType>(AIType.PROBABILITY);
+  const [numAI, setNumAI]           = useState(2);
+  const [aiType, setAiType]         = useState<AIType>(AIType.PROBABILITY);
+  const [creating, setCreating]     = useState(false);
+  const [joining, setJoining]       = useState(false);
+
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  // Focus name on mount
+  useEffect(() => { setTimeout(() => nameRef.current?.focus(), 100); }, []);
+
+  // Persist name
+  useEffect(() => {
+    try { if (name) localStorage.setItem('poker_player_name', name); } catch {}
+  }, [name]);
+
+  // Show errors as toasts and clear from store
+  useEffect(() => {
+    if (error) {
+      toastError(error);
+      clearError();
+      setCreating(false);
+      setJoining(false);
+      SFX.error();
+    }
+  }, [error]);
+
+  // Sync big blind to 2× small blind automatically
+  const handleSmallBlindChange = (v: number) => {
+    setSmallBlind(v);
+    setBigBlind(v * 2);
+  };
 
   const handleCreate = () => {
-    if (!name.trim()) return;
+    if (!name.trim()) { toastError('Enter your name first'); SFX.error(); return; }
+    if (!connected) { toastError('Still connecting to server…'); SFX.error(); return; }
+    setCreating(true);
+    SFX.click();
     createRoom(name.trim(), { smallBlind, bigBlind, startingStack: startStack, numAI, aiType });
   };
 
   const handleJoin = () => {
-    if (!name.trim() || !joinCode.trim()) return;
+    if (!name.trim()) { toastError('Enter your name first'); SFX.error(); return; }
+    if (joinCode.length < 6) { toastError('Enter the 6-letter room code'); SFX.error(); return; }
+    if (!connected) { toastError('Still connecting to server…'); SFX.error(); return; }
+    setJoining(true);
+    SFX.click();
     joinRoom(joinCode.trim(), name.trim());
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: 'radial-gradient(ellipse at 30% 20%, #0d2a0d 0%, #050c05 50%, #020602 100%)' }}>
+// Removed unused handleCopyServerUrl
 
-      {/* Ambient card decorations */}
+  const switchTab = (t: 'create' | 'join') => {
+    setTab(t);
+    SFX.click();
+  };
+
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: 'radial-gradient(ellipse at 30% 20%, #0d2a0d 0%, #050c05 55%, #020602 100%)' }}
+    >
+      {/* Ambient suit icons */}
       <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
         {SUIT_ICONS.map((suit, i) => (
-          <div key={i} className="absolute text-green-900/20 font-bold"
+          <div
+            key={i}
+            className="suit-ambient"
             style={{
+              position: 'absolute',
               fontSize: `${8 + i * 3}rem`,
+              color: 'rgba(74,222,128,0.07)',
               top: `${[10, 60, 5, 70][i]}%`,
               left: `${[5, 75, 60, 15][i]}%`,
-              transform: `rotate(${[-15, 20, -30, 10][i]}deg)`,
-            }}>
-            {suit}
-          </div>
+              animationDelay: `${i * 4}s`,
+              animationDuration: `${22 + i * 7}s`,
+            }}
+          >{suit}</div>
         ))}
       </div>
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="text-7xl mb-4 select-none" style={{ filter: 'drop-shadow(0 0 20px rgba(74,222,128,0.3))' }}>🃏</div>
-          <h1 className="text-5xl font-black tracking-tight mb-1"
-            style={{ background: 'linear-gradient(135deg, #4ade80, #facc15, #f97316)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            POKER
-          </h1>
-          <p className="text-green-400/70 text-sm font-medium tracking-widest uppercase">No-Limit Texas Hold'em</p>
-          <div className="mt-2 flex items-center justify-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}
-              style={connected ? { boxShadow: '0 0 6px #22c55e' } : {}} />
-            <span className="text-gray-600 text-xs">{connected ? 'Connected to server' : 'Connecting…'}</span>
+      <div className="w-full max-w-md relative z-10 animate-slide-up">
+
+        {/* ── Header ── */}
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ fontSize: '5rem', marginBottom: '8px', filter: 'drop-shadow(0 0 24px rgba(74,222,128,0.35))' }}
+            className="animate-float">🃏</div>
+          <h1 style={{
+            fontSize: '3.5rem', fontWeight: 900, margin: '0 0 4px',
+            background: 'linear-gradient(135deg,#4ade80,#facc15,#f97316)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            letterSpacing: '-2px', lineHeight: 1,
+          }}>POKER</h1>
+          <p style={{ color: 'rgba(74,222,128,0.55)', fontSize: '11px', letterSpacing: '3px', textTransform: 'uppercase', margin: '0 0 10px' }}>
+            No-Limit Texas Hold'em
+          </p>
+
+          {/* Connection indicator */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px',
+            padding: '4px 12px', borderRadius: '999px',
+            background: connected ? 'rgba(22,101,52,0.3)' : 'rgba(127,29,29,0.3)',
+            border: `1px solid ${connected ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
+          }}>
+            <div style={{
+              position: 'relative', width: '8px', height: '8px',
+              borderRadius: '50%', background: connected ? '#22c55e' : '#ef4444',
+              boxShadow: connected ? '0 0 6px #22c55e' : '0 0 6px #ef4444',
+            }} className={connected ? 'pulse-ring' : ''} />
+            <span style={{ fontSize: '11px', fontWeight: 600, color: connected ? '#86efac' : '#fca5a5' }}>
+              {connected ? 'Server Online' : 'Connecting…'}
+            </span>
           </div>
         </div>
 
-        {/* Error banner */}
-        {error && (
-          <div className="mb-4 p-3 rounded-xl flex items-center justify-between"
-            style={{ background: 'rgba(127,29,29,0.5)', border: '1px solid rgba(239,68,68,0.5)' }}>
-            <span className="text-red-200 text-sm">⚠️ {error}</span>
-            <button onClick={clearError} className="text-red-400 hover:text-red-200 ml-2 text-lg leading-none">✕</button>
-          </div>
-        )}
-
-        {/* Card */}
-        <div className="rounded-2xl p-6 backdrop-blur-sm"
-          style={{
-            background: 'rgba(6, 20, 6, 0.9)',
-            border: '1px solid rgba(74,222,128,0.15)',
-            boxShadow: '0 0 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(74,222,128,0.1)',
-          }}>
+        {/* ── Main card ── */}
+        <div className="glass" style={{ borderRadius: '20px', padding: '24px' }}>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '20px',
+            padding: '4px', borderRadius: '14px', background: 'rgba(0,0,0,0.4)' }}>
             {(['create', 'join'] as const).map(t => (
-              <button key={t}
-                onClick={() => setTab(t)}
-                className={`flex-1 py-2.5 rounded-lg font-bold text-sm transition-all ${
-                  tab === t
+              <button
+                key={t}
+                onClick={() => switchTab(t)}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '10px',
+                  fontWeight: 700, fontSize: '13px', border: 'none', cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  background: tab === t
                     ? t === 'create'
-                      ? 'text-white shadow-lg'
-                      : 'text-white shadow-lg'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
-                style={tab === t ? {
-                  background: t === 'create'
-                    ? 'linear-gradient(135deg,#15803d,#166534)'
-                    : 'linear-gradient(135deg,#1d4ed8,#1e40af)',
-                  boxShadow: t === 'create'
-                    ? '0 2px 12px rgba(22,163,74,0.3)'
-                    : '0 2px 12px rgba(59,130,246,0.3)',
-                } : {}}
+                      ? 'linear-gradient(135deg,#15803d,#166534)'
+                      : 'linear-gradient(135deg,#1d4ed8,#1e40af)'
+                    : 'transparent',
+                  color: tab === t ? '#fff' : '#6b7280',
+                  boxShadow: tab === t
+                    ? t === 'create' ? '0 2px 12px rgba(22,163,74,0.35)' : '0 2px 12px rgba(59,130,246,0.35)'
+                    : 'none',
+                }}
               >
                 {t === 'create' ? '🏠 Create Table' : '🚀 Join Table'}
               </button>
             ))}
           </div>
 
-          {/* Name input (shared) */}
-          <div className="mb-4">
-            <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1.5">Your Name</label>
+          {/* ── Name input (shared) ── */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', color: '#6b7280', fontSize: '10px',
+              fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '6px' }}>
+              Your Name
+            </label>
             <input
-              className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-600 text-sm font-medium transition-all outline-none"
+              ref={nameRef}
               style={{
-                background: 'rgba(0,0,0,0.4)',
-                border: '1px solid rgba(74,222,128,0.2)',
+                width: '100%', padding: '12px 14px', borderRadius: '12px',
+                background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(74,222,128,0.2)',
+                color: '#fff', fontSize: '15px', fontWeight: 600, outline: 'none',
+                transition: 'border-color 0.2s', boxSizing: 'border-box',
               }}
-              onFocus={e => e.target.style.borderColor = 'rgba(74,222,128,0.5)'}
+              onFocus={e => e.target.style.borderColor = 'rgba(74,222,128,0.55)'}
               onBlur={e => e.target.style.borderColor = 'rgba(74,222,128,0.2)'}
               placeholder="Enter your name…"
               value={name}
@@ -129,113 +199,182 @@ export const MenuScreen: React.FC = () => {
             />
           </div>
 
+          {/* ── CREATE TAB ── */}
           {tab === 'create' ? (
             <>
-              {/* Game settings grid */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              {/* Blinds & stack config */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                 {[
-                  { label: 'Small Blind', value: smallBlind, setter: setSmallBlind, min: 1 },
-                  { label: 'Big Blind',   value: bigBlind,   setter: setBigBlind,   min: 1 },
-                  { label: 'Starting Stack', value: startStack, setter: setStartStack, min: 10 },
-                  { label: 'AI Opponents',   value: numAI,     setter: setNumAI,     min: 0, max: 8 },
-                ].map(({ label, value, setter, min, max }) => (
+                  { label: 'Small Blind', value: smallBlind, setter: handleSmallBlindChange, min: 1, step: 5 },
+                  { label: 'Big Blind',   value: bigBlind,   setter: setBigBlind,   min: 2, step: 10 },
+                  { label: 'Starting Stack', value: startStack, setter: setStartStack, min: 100, step: 100 },
+                  { label: 'AI Opponents',   value: numAI,     setter: setNumAI,     min: 0, max: 8, step: 1 },
+                ].map(({ label, value, setter, min, max, step }) => (
                   <div key={label}>
-                    <label className="block text-gray-500 text-xs font-semibold uppercase tracking-wide mb-1">{label}</label>
+                    <label style={{ display: 'block', color: '#6b7280', fontSize: '10px',
+                      fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>
+                      {label}
+                    </label>
                     <input
                       type="number"
-                      className="w-full px-3 py-2.5 rounded-xl text-white text-sm font-medium transition-all outline-none"
-                      style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(74,222,128,0.15)' }}
+                      style={{
+                        width: '100%', padding: '10px 12px', borderRadius: '10px',
+                        background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(74,222,128,0.12)',
+                        color: '#fff', fontSize: '14px', fontWeight: 700, outline: 'none',
+                        transition: 'border-color 0.2s', boxSizing: 'border-box',
+                      }}
                       onFocus={e => e.target.style.borderColor = 'rgba(74,222,128,0.4)'}
-                      onBlur={e => e.target.style.borderColor = 'rgba(74,222,128,0.15)'}
+                      onBlur={e => e.target.style.borderColor = 'rgba(74,222,128,0.12)'}
                       value={value}
                       onChange={e => setter(Number(e.target.value))}
-                      min={min}
-                      max={max}
+                      min={min} max={max} step={step}
                     />
                   </div>
                 ))}
               </div>
 
-              {/* AI type selector */}
-              <div className="mb-5">
-                <label className="block text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">AI Difficulty</label>
-                <div className="space-y-1.5">
+              {/* AI difficulty */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', color: '#6b7280', fontSize: '10px',
+                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+                  AI Difficulty
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {AI_OPTIONS.map(opt => (
                     <button
                       key={opt.value}
-                      onClick={() => setAiType(opt.value)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-all `}
+                      onClick={() => { setAiType(opt.value); SFX.click(); }}
                       style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '9px 12px', borderRadius: '10px', textAlign: 'left',
+                        cursor: 'pointer', border: 'none', transition: 'all 0.15s',
                         background: aiType === opt.value ? 'rgba(74,222,128,0.1)' : 'rgba(0,0,0,0.3)',
-                        border: aiType === opt.value ? '1px solid rgba(74,222,128,0.4)' : '1px solid rgba(255,255,255,0.05)',
+                        outline: aiType === opt.value ? '1px solid rgba(74,222,128,0.4)' : '1px solid rgba(255,255,255,0.05)',
                       }}
                     >
-                      <span className="text-lg">{opt.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className={`text-sm font-semibold ${opt.color}`}>{opt.label}</div>
-                        <div className="text-gray-600 text-xs truncate">{opt.desc}</div>
+                      <span style={{ fontSize: '18px', flexShrink: 0 }}>{opt.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: opt.color, marginBottom: '1px' }}>{opt.label}</div>
+                        <div style={{ fontSize: '11px', color: '#4b5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.desc}</div>
                       </div>
-                      {aiType === opt.value && <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0" />}
+                      {aiType === opt.value && (
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', flexShrink: 0 }} />
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <p className="text-gray-600 text-xs text-center mb-4">
-                Share your room code after creating so friends can join.
+              <p style={{ color: '#374151', fontSize: '12px', textAlign: 'center', marginBottom: '14px' }}>
+                Share your 6-letter room code with friends after creating.
               </p>
 
               <button
-                className="w-full py-3.5 font-black rounded-xl text-base tracking-wide transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-press"
                 onClick={handleCreate}
-                disabled={!name.trim()}
+                disabled={!name.trim() || creating}
                 style={{
-                  background: 'linear-gradient(135deg,#15803d,#166534)',
+                  width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                  fontWeight: 900, fontSize: '15px', cursor: name.trim() ? 'pointer' : 'not-allowed',
+                  background: name.trim() ? 'linear-gradient(135deg,#15803d,#166534)' : 'rgba(55,65,81,0.5)',
+                  color: '#fff', letterSpacing: '0.5px',
                   boxShadow: name.trim() ? '0 4px 20px rgba(22,163,74,0.4)' : 'none',
+                  transition: 'all 0.2s', opacity: creating ? 0.7 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 }}
               >
-                Create Table 🎲
+                {creating ? (
+                  <>
+                    <div style={{ width: '16px', height: '16px', borderRadius: '50%',
+                      border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff',
+                      animation: 'spin 0.7s linear infinite' }} />
+                    Creating…
+                  </>
+                ) : 'Create Table 🎲'}
               </button>
             </>
           ) : (
+            /* ── JOIN TAB ── */
             <>
-              <div className="mb-5">
-                <label className="block text-gray-500 text-xs font-semibold uppercase tracking-wide mb-2">Room Code</label>
+              {urlJoinCode && (
+                <div style={{
+                  marginBottom: '12px', padding: '8px 12px', borderRadius: '10px',
+                  background: 'rgba(22,101,52,0.2)', border: '1px solid rgba(74,222,128,0.2)',
+                  fontSize: '12px', color: '#86efac', fontWeight: 600,
+                }}>
+                  🔗 Joining via invite link — code pre-filled!
+                </div>
+              )}
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', color: '#6b7280', fontSize: '10px',
+                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+                  Room Code
+                </label>
                 <input
-                  className="w-full px-4 py-4 rounded-xl text-white text-3xl font-black tracking-[0.4em] text-center uppercase placeholder-gray-700 transition-all outline-none"
-                  style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(59,130,246,0.3)', letterSpacing: '0.4em' }}
-                  onFocus={e => e.target.style.borderColor = 'rgba(59,130,246,0.6)'}
+                  style={{
+                    width: '100%', padding: '16px', borderRadius: '12px',
+                    background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(59,130,246,0.3)',
+                    color: '#fff', fontSize: '2rem', fontWeight: 900,
+                    letterSpacing: '0.4em', textAlign: 'center', textTransform: 'uppercase',
+                    outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box',
+                  }}
+                  onFocus={e => e.target.style.borderColor = 'rgba(59,130,246,0.7)'}
                   onBlur={e => e.target.style.borderColor = 'rgba(59,130,246,0.3)'}
                   placeholder="XXXXXX"
                   value={joinCode}
-                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
                   maxLength={6}
                   onKeyDown={e => { if (e.key === 'Enter') handleJoin(); }}
                 />
+                {/* Individual code letter boxes visual hint */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', marginTop: '8px' }}>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} style={{
+                      width: '32px', height: '4px', borderRadius: '2px',
+                      background: i < joinCode.length ? '#3b82f6' : 'rgba(59,130,246,0.15)',
+                      transition: 'background 0.2s',
+                    }} />
+                  ))}
+                </div>
               </div>
 
-              <p className="text-gray-600 text-xs text-center mb-5">
+              <p style={{ color: '#374151', fontSize: '12px', textAlign: 'center', marginBottom: '16px' }}>
                 Get the 6-letter code from whoever created the table.
               </p>
 
               <button
-                className="w-full py-3.5 font-black rounded-xl text-base tracking-wide transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-press"
                 onClick={handleJoin}
-                disabled={!name.trim() || joinCode.length < 4}
+                disabled={!name.trim() || joinCode.length < 6 || joining}
                 style={{
-                  background: 'linear-gradient(135deg,#1d4ed8,#1e40af)',
-                  boxShadow: (name.trim() && joinCode.length >= 4) ? '0 4px 20px rgba(59,130,246,0.4)' : 'none',
+                  width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                  fontWeight: 900, fontSize: '15px',
+                  cursor: (name.trim() && joinCode.length >= 6) ? 'pointer' : 'not-allowed',
+                  background: (name.trim() && joinCode.length >= 6) ? 'linear-gradient(135deg,#1d4ed8,#1e40af)' : 'rgba(55,65,81,0.5)',
+                  color: '#fff', letterSpacing: '0.5px',
+                  boxShadow: (name.trim() && joinCode.length >= 6) ? '0 4px 20px rgba(59,130,246,0.4)' : 'none',
+                  transition: 'all 0.2s', opacity: joining ? 0.7 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 }}
               >
-                Join Table 🚀
+                {joining ? (
+                  <>
+                    <div style={{ width: '16px', height: '16px', borderRadius: '50%',
+                      border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff',
+                      animation: 'spin 0.7s linear infinite' }} />
+                    Joining…
+                  </>
+                ) : 'Join Table 🚀'}
               </button>
             </>
           )}
         </div>
 
-        <p className="text-center text-gray-700 text-xs mt-5">
-          All-in or fold — the math decides ♠♥♦♣
-        </p>
+        {/* ── Footer ── */}
+        <div style={{ textAlign: 'center', marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '16px' }}>
+          <p style={{ color: '#374151', fontSize: '12px' }}>All-in or fold — the math decides ♠♥♦♣</p>
+        </div>
       </div>
     </div>
   );

@@ -1,19 +1,115 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePokerStore } from './store/pokerStore';
 import MenuScreen from './screens/MenuScreen';
 import GameScreen from './screens/GameScreen';
+import { ToastProvider } from './components/Toast';
+import { unlockAudio } from './services/SoundManager';
 
-function App() {
-  const { connect, roomId } = usePokerStore();
+const SUITS = ['♠', '♥', '♦', '♣'];
+
+function WakeUpScreen() {
+  const [dots, setDots] = useState('');
+  const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
-    connect();
+    const d = setInterval(() => setDots(p => p.length >= 3 ? '' : p + '.'), 500);
+    const s = setInterval(() => setSeconds(p => p + 1), 1000);
+    return () => { clearInterval(d); clearInterval(s); };
   }, []);
 
   return (
-    <div className="min-h-screen text-white" style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
-      {roomId ? <GameScreen /> : <MenuScreen />}
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: '24px',
+      background: 'radial-gradient(ellipse at 30% 20%, #0d2a0d 0%, #050c05 60%)',
+    }}>
+      {/* Animated suits */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        {SUITS.map((s, i) => (
+          <div key={i} className="suit-ambient" style={{
+            position: 'absolute',
+            fontSize: `${9 + i * 3}rem`,
+            color: 'rgba(74,222,128,0.06)',
+            top: `${[10,60,5,70][i]}%`,
+            left: `${[5,75,60,15][i]}%`,
+            animationDelay: `${i * 5}s`,
+            animationDuration: `${20 + i * 8}s`,
+          }}>{s}</div>
+        ))}
+      </div>
+
+      {/* Logo */}
+      <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+        <div style={{ fontSize: '5rem', filter: 'drop-shadow(0 0 30px rgba(74,222,128,0.4))' }}
+          className="animate-float">🃏</div>
+        <h1 style={{
+          fontSize: '3rem', fontWeight: 900, margin: '8px 0 4px',
+          background: 'linear-gradient(135deg,#4ade80,#facc15,#f97316)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          letterSpacing: '-1px',
+        }}>POKER</h1>
+        <p style={{ color: 'rgba(74,222,128,0.6)', fontSize: '12px', letterSpacing: '3px', textTransform: 'uppercase' }}>
+          No-Limit Texas Hold'em
+        </p>
+      </div>
+
+      {/* Spinner + status */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', zIndex: 1 }}>
+        <div style={{
+          width: '44px', height: '44px', borderRadius: '50%',
+          border: '3px solid rgba(74,222,128,0.15)',
+          borderTopColor: '#4ade80',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <p style={{ color: '#6b7280', fontSize: '14px', fontWeight: 600 }}>
+          Warming up server{dots}
+        </p>
+        {seconds >= 5 && (
+          <p style={{ color: '#4b5563', fontSize: '12px', maxWidth: '260px', textAlign: 'center', lineHeight: 1.5 }}>
+            Free server wakes up after idle — usually ready in ~20s
+          </p>
+        )}
+        {seconds >= 15 && (
+          <p style={{ color: '#374151', fontSize: '11px' }}>({seconds}s elapsed)</p>
+        )}
+      </div>
     </div>
+  );
+}
+
+function App() {
+  const { connect, roomId, connected } = usePokerStore();
+  const [showWakeUp, setShowWakeUp] = useState(false);
+
+  useEffect(() => {
+    connect();
+    // Show wake-up screen only if we haven't connected after 2s
+    const t = setTimeout(() => {
+      if (!usePokerStore.getState().connected) setShowWakeUp(true);
+    }, 2000);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (connected) setShowWakeUp(false);
+  }, [connected]);
+
+  return (
+    <ToastProvider>
+      <div
+        className="min-h-screen text-white"
+        style={{ fontFamily: "'Inter','Segoe UI',sans-serif" }}
+        onPointerDown={unlockAudio}
+      >
+        {showWakeUp && !connected ? (
+          <WakeUpScreen />
+        ) : roomId ? (
+          <GameScreen />
+        ) : (
+          <MenuScreen />
+        )}
+      </div>
+    </ToastProvider>
   );
 }
 

@@ -7,96 +7,229 @@
   --gold: #d97706;
   --gold-light: #fbbf24;
   --table-rail: #3d1e06;
+  --toast-z: 9999;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
-  margin: 0;
-  padding: 0;
+  margin: 0; padding: 0;
   min-height: 100vh;
   font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif;
   background: #050c05;
   color: #fff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* ── Custom range slider ── */
+/* ── Range slider ── */
 input[type='range'] {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 6px;
-  border-radius: 9999px;
-  outline: none;
-  cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  height: 6px; border-radius: 9999px; outline: none; cursor: pointer;
 }
-
 input[type='range']::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px; border-radius: 50%;
   background: linear-gradient(135deg, #fbbf24, #d97706);
-  cursor: pointer;
-  border: 2px solid rgba(255,255,255,0.2);
-  box-shadow: 0 0 8px rgba(217,119,6,0.6);
-  transition: transform 0.1s, box-shadow 0.1s;
+  cursor: pointer; border: 2px solid rgba(255,255,255,0.25);
+  box-shadow: 0 0 10px rgba(217,119,6,0.7);
+  transition: transform 0.15s, box-shadow 0.15s;
 }
-
 input[type='range']::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 12px rgba(217,119,6,0.9);
+  transform: scale(1.25); box-shadow: 0 0 16px rgba(217,119,6,1);
+}
+input[type='range']::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24, #d97706);
+  cursor: pointer; border: 2px solid rgba(255,255,255,0.25);
+  box-shadow: 0 0 10px rgba(217,119,6,0.7);
 }
 
-input[type='range']::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #fbbf24, #d97706);
-  cursor: pointer;
-  border: 2px solid rgba(255,255,255,0.2);
-  box-shadow: 0 0 8px rgba(217,119,6,0.6);
-}
+/* ── Number input — hide arrows ── */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type='number'] { -moz-appearance: textfield; }
 
 /* ── Scrollbars ── */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1a3a1a; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #2a5a2a; }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* ────────────────────────────────────────────────────
+   ANIMATIONS
+──────────────────────────────────────────────────── */
 
-::-webkit-scrollbar-thumb {
-  background: #1a3a1a;
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #2a5a2a;
-}
-
-/* ── Animations ── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.85) translateY(4px); }
+  from { opacity: 0; transform: scale(0.88) translateY(6px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(120%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(120%); }
 }
 
 @keyframes glow {
   0%, 100% { box-shadow: 0 0 8px rgba(250,204,21,0.3); }
-  50%       { box-shadow: 0 0 20px rgba(250,204,21,0.7); }
+  50%       { box-shadow: 0 0 24px rgba(250,204,21,0.85); }
 }
 
-.animate-glow {
-  animation: glow 1.5s ease-in-out infinite;
+@keyframes glowGreen {
+  0%, 100% { box-shadow: 0 0 6px rgba(74,222,128,0.2); }
+  50%       { box-shadow: 0 0 18px rgba(74,222,128,0.7); }
 }
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@keyframes cardDeal {
+  from { opacity: 0; transform: scale(0.6) rotate(-8deg) translateY(-20px); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg) translateY(0); }
+}
+
+@keyframes cardFlip {
+  0%   { transform: scaleX(1); }
+  50%  { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+
+@keyframes winPulse {
+  0%   { transform: scale(1); box-shadow: 0 0 0 rgba(74,222,128,0); }
+  50%  { transform: scale(1.04); box-shadow: 0 0 28px rgba(74,222,128,0.5); }
+  100% { transform: scale(1); box-shadow: 0 0 0 rgba(74,222,128,0); }
+}
+
+@keyframes chipFlyIn {
+  from { opacity: 0; transform: scale(0) translateY(-30px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes bounceIn {
+  0%   { transform: scale(0.3); opacity: 0; }
+  50%  { transform: scale(1.08); }
+  70%  { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes countUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes actionTick {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes suitRotate {
+  0%   { transform: rotate(0deg) scale(1); opacity: 0.15; }
+  50%  { opacity: 0.22; }
+  100% { transform: rotate(360deg) scale(1); opacity: 0.15; }
+}
+
+/* ── Utility classes ── */
+.animate-glow        { animation: glow 1.5s ease-in-out infinite; }
+.animate-glow-green  { animation: glowGreen 2s ease-in-out infinite; }
+.animate-card-deal   { animation: cardDeal 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
+.animate-bounce-in   { animation: bounceIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+.animate-win-pulse   { animation: winPulse 1.2s ease-in-out 2; }
+.animate-chip-fly    { animation: chipFlyIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+.animate-float       { animation: float 3s ease-in-out infinite; }
+.animate-slide-up    { animation: slideUp 0.3s ease-out both; }
+.animate-slide-down  { animation: slideDown 0.3s ease-out both; }
+.animate-shimmer     {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* Toast */
+.toast-enter { animation: slideInRight 0.35s cubic-bezier(0.34,1.56,0.64,1) both; }
+.toast-exit  { animation: slideOutRight 0.25s ease-in forwards; }
+
+/* Pulse ring */
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulse-ring 1.2s ease-out infinite;
+  pointer-events: none;
+}
+
+/* Action timer bar */
+.action-timer-bar {
+  animation: actionTick linear forwards;
+}
+
+/* Glass card */
+.glass {
+  background: rgba(6,20,6,0.92);
+  border: 1px solid rgba(74,222,128,0.15);
+  box-shadow: 0 0 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(74,222,128,0.08);
+  backdrop-filter: blur(16px);
+}
+
+/* Button press effect */
+.btn-press {
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn-press:active { transform: scale(0.95); }
+
+/* Hotkey badge */
+.hotkey-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.6);
+  line-height: 1;
+}
+
+/* Suit ambient bg */
+.suit-ambient {
+  animation: suitRotate 20s linear infinite;
+}
+
+/* Card count-up */
+.count-up { animation: countUp 0.25s ease-out both; }
