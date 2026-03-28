@@ -100,17 +100,27 @@ function App() {
   return (
     <ToastProvider>
       <div
-        className="min-h-screen text-white"
+        className="min-h-screen text-white landscape-wrapper"
         style={{ fontFamily: "'Inter','Segoe UI',sans-serif" }}
         onPointerDown={unlockAudio}
       >
-        {showWakeUp && !connected ? (
-          <WakeUpScreen />
-        ) : roomId ? (
-          <GameScreen />
-        ) : (
-          <MenuScreen />
-        )}
+        <div id="portrait-warning" className="fixed inset-0 z-[99999] flex-col items-center justify-center hidden bg-black/90 backdrop-blur-xl">
+          <div className="rotate-icon text-5xl mb-6 opacity-80" style={{ animation: 'spin-phone 1.5s infinite ease-in-out alternate' }}>📱</div>
+          <h2 className="text-2xl font-black text-white mb-2 tracking-wide">♣ Rotate Device ♣</h2>
+          <p className="text-gray-400 text-sm max-w-[260px] text-center font-medium leading-relaxed">
+            Texas Hold'em requires a landscape screen to perfectly fit 10 players.
+          </p>
+        </div>
+
+        <div className="game-content h-full">
+          {showWakeUp && !connected ? (
+            <WakeUpScreen />
+          ) : roomId ? (
+            <GameScreen />
+          ) : (
+            <MenuScreen />
+          )}
+        </div>
       </div>
     </ToastProvider>
   );

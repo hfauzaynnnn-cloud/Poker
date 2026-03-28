@@ -287,7 +287,7 @@ export const GameScreen: React.FC = () => {
           )}
 
           {/* Poker Table */}
-          <div style={{ padding: '0 4px', flexShrink: 0 }}>
+          <div style={{ padding: '0 4px', flexShrink: 0 }} className="landscape-shrink">
             <PokerTable gameState={gameState} myPlayerId={playerId} />
           </div>
 
@@ -370,7 +370,7 @@ export const GameScreen: React.FC = () => {
 
           {/* Action Panel */}
           {isMyTurn && legalActions && (
-            <div style={{ padding: '0 8px 8px' }}>
+            <div style={{ padding: '0 8px 8px' }} className="action-panel-shrink">
               <ActionPanel
                 legal={legalActions}
                 gameState={gameState}

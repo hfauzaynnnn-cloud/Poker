@@ -50,7 +50,7 @@ input[type='range']::-moz-range-thumb {
 /* ── Number input — hide arrows ── */
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-input[type='number'] { -moz-appearance: textfield; }
+input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
 
 /* ── Scrollbars ── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -233,3 +233,38 @@ input[type='number'] { -moz-appearance: textfield; }
 
 /* Card count-up */
 .count-up { animation: countUp 0.25s ease-out both; }
+
+/* ────────────────────────────────────────────────────
+   MOBILE LANDSCAPE LOCK OVERLAY
+──────────────────────────────────────────────────── */
+
+@keyframes spin-phone {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-90deg); }
+}
+
+/* On phones when held vertically (portrait), show the warning, hide the game */
+@media (max-width: 900px) and (orientation: portrait) {
+  #portrait-warning {
+    display: flex !important;
+  }
+  .game-content {
+    display: none !important;
+  }
+}
+
+/* Force everything to fit on short horizontal mobile screens */
+@media (max-height: 500px) and (orientation: landscape) {
+  .landscape-shrink {
+    transform: scale(0.75);
+    transform-origin: top center;
+    margin-bottom: -15%; /* Recover the dead space from the shrink */
+  }
+  .action-panel-shrink {
+    padding: 6px !important;
+    gap: 8px !important;
+  }
+  .action-panel-shrink .grid {
+    gap: 4px !important;
+  }
+}
