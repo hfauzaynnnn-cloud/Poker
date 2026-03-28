@@ -26,6 +26,24 @@ function saveStats(s: SessionStats) {
   try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch {}
 }
 
+const SESSION_KEY = 'poker_active_session';
+interface ActiveSession { roomId: string; roomCode: string; playerId: string; }
+
+function loadSession(): ActiveSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
+function saveSession(s: ActiveSession | null) {
+  try {
+    if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    else localStorage.removeItem(SESSION_KEY);
+  } catch {}
+}
+
 interface PokerStore {
   socket: Socket | null;
   roomId: string | null;
@@ -86,6 +104,10 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
 
     socket.on('connect', () => {
       set({ connected: true });
+      const session = loadSession();
+      if (session) {
+        socket.emit('reconnect_player', { roomCode: session.roomCode, playerId: session.playerId });
+      }
     });
 
     socket.on('disconnect', () => {
@@ -93,17 +115,30 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
     });
 
     socket.on('room_created', (data: { roomId: string; roomCode: string; playerId: string; state: GameState }) => {
+      saveSession({ roomId: data.roomId, roomCode: data.roomCode, playerId: data.playerId });
       set({ roomId: data.roomId, roomCode: data.roomCode, playerId: data.playerId, gameState: data.state, error: null });
     });
 
     socket.on('room_joined', (data: { roomId: string; roomCode: string; playerId: string; state: GameState }) => {
+      saveSession({ roomId: data.roomId, roomCode: data.roomCode, playerId: data.playerId });
       set({ roomId: data.roomId, roomCode: data.roomCode, playerId: data.playerId, gameState: data.state, error: null });
+    });
+
+    socket.on('reconnect_failed', (data: { message: string }) => {
+      saveSession(null);
+      set({ roomId: null, roomCode: null, playerId: null, gameState: null, error: data.message });
     });
 
     socket.on('player_joined', (data: { playerName: string; state: GameState }) => {
       set(s => ({
         gameState: data.state,
         actionLog: [...s.actionLog, `👤 ${data.playerName} joined the table`],
+      }));
+    });
+
+    socket.on('player_reconnected', (data: { playerName: string }) => {
+      set(s => ({
+         actionLog: [...s.actionLog, `🔌 ${data.playerName} reconnected`]
       }));
     });
 
@@ -217,8 +252,9 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
   },
 
   disconnect: () => {
-    get().socket?.disconnect();
-    set({ socket: null, connected: false, roomId: null, roomCode: null, playerId: null, gameState: null });
+      get().socket?.disconnect();
+      saveSession(null);
+      set({ socket: null, connected: false, roomId: null, roomCode: null, playerId: null, gameState: null });
   },
 
   createRoom: (playerName, opts) => {

@@ -153,6 +153,41 @@ io.on('connection', (socket: Socket) => {
     console.log(`[Room] ${newPlayer.name} joined ${room.roomCode}`);
   });
 
+  // ── Reconnect Player ──────────────────────────────────────────────────────
+  socket.on('reconnect_player', (data: { roomCode: string; playerId: string }) => {
+    const room = findRoomByCode(data.roomCode);
+    if (!room) {
+      socket.emit('reconnect_failed', { message: 'Room no longer exists.' });
+      return;
+    }
+
+    const playerIndex = room.state.players.findIndex(p => p.id === data.playerId);
+    if (playerIndex === -1) {
+      socket.emit('reconnect_failed', { message: 'Player not found in this room.' });
+      return;
+    }
+
+    // Update status from sitting out to active (if applicable)
+    const player = room.state.players[playerIndex];
+    if (player.status === PlayerStatus.SITTING_OUT) {
+      room.state = {
+        ...room.state,
+        players: room.state.players.map(p =>
+          p.id === data.playerId ? { ...p, status: PlayerStatus.ACTIVE } : p
+        )
+      };
+    }
+
+    // Remap sockets
+    room.socketToPlayer.set(socket.id, data.playerId);
+    room.playerToSocket.set(data.playerId, socket.id);
+    socket.join(room.roomId);
+
+    socket.emit('room_joined', { roomId: room.roomId, roomCode: room.roomCode, playerId: data.playerId, state: sanitizeState(room.state, data.playerId) });
+    io.to(room.roomId).emit('player_reconnected', { playerName: player.name });
+    console.log(`[Room] ${player.name} reconnected to ${room.roomCode}`);
+  });
+
   // ── Start Game ───────────────────────────────────────────────────────────
   socket.on('start_game', (data: { roomId: string }) => {
     const room = rooms.get(data.roomId);
@@ -266,7 +301,7 @@ io.on('connection', (socket: Socket) => {
         room.state = {
           ...room.state,
           players: room.state.players.map(p =>
-            p.id === pid ? { ...p, status: p.status === PlayerStatus.ACTIVE ? PlayerStatus.SITTING_OUT : p.status } : p
+            p.id === pid && p.status === PlayerStatus.ACTIVE ? { ...p, status: PlayerStatus.SITTING_OUT } : p
           ),
         };
         io.to(rid).emit('player_disconnected', { playerId: pid });
