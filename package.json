@@ -1,0 +1,12 @@
+{
+  "name": "poker-root",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "20.x"
+  },
+  "scripts": {
+    "postinstall": "cd server && npm install && npm run build",
+    "start": "cd server && npm start"
+  }
+}
