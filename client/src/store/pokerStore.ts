@@ -100,7 +100,8 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
   connect: () => {
     if (get().socket?.connected) return;
 
-    const socket = io(SERVER_URL, { transports: ['websocket'] });
+    // Removing forced websocket transport to allow standard polling -> upgrade flow
+    const socket = io(SERVER_URL);
 
     socket.on('connect', () => {
       set({ connected: true });
