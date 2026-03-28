@@ -64,6 +64,9 @@ function WakeUpScreen() {
         <p style={{ color: '#6b7280', fontSize: '14px', fontWeight: 600 }}>
           Warming up server{dots}
         </p>
+        <p style={{ color: '#ef4444', fontSize: '10px', marginTop: '4px' }}>
+          Debug URL: {import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'}
+        </p>
         {seconds >= 5 && (
           <p style={{ color: '#4b5563', fontSize: '12px', maxWidth: '260px', textAlign: 'center', lineHeight: 1.5 }}>
             Free server wakes up after idle — usually ready in ~20s
