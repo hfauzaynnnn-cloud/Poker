@@ -98,108 +98,14 @@ export const GameScreen: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen flex flex-col overflow-hidden"
+      className="min-h-screen flex overflow-hidden w-full h-full"
       style={{ background: 'radial-gradient(ellipse at top, #0a1f0a 0%, #050c05 100%)' }}
     >
-      {/* ── Top Bar ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 12px', flexShrink: 0,
-        background: 'linear-gradient(180deg,#0d1f0d,#070f07)',
-        borderBottom: '1px solid #1a3a1a',
-        gap: '8px',
-      }}>
-        {/* Left: logo + hand info */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-          <span style={{ fontWeight: 900, fontSize: '15px', flexShrink: 0 }}>
-            🃏 <span style={{
-              background: 'linear-gradient(90deg,#4ade80,#facc15)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>Poker</span>
-          </span>
-          <span style={{ color: '#374151', fontSize: '11px' }}>#{gameState.handNumber}</span>
-          {gameState.street !== 'finished' && gameState.phase === 'playing' && (
-            <span style={{
-              padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.5px',
-              background: streetInfo.bg, color: streetInfo.text,
-            }}>
-              {streetInfo.label}
-            </span>
-          )}
-        </div>
-
-        {/* Right: room code, controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-          {/* Room code with copy */}
-          {roomCode && (
-            <button
-              onClick={handleCopyCode}
-              title="Copy invite link"
-              style={{
-                display: 'flex', alignItems: 'center', gap: '5px',
-                padding: '3px 8px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                background: codeCopied ? 'rgba(22,101,52,0.4)' : 'rgba(0,0,0,0.4)',
-                outline: codeCopied ? '1px solid rgba(74,222,128,0.5)' : '1px solid rgba(255,255,255,0.08)',
-                transition: 'all 0.25s',
-              }}
-            >
-              <span style={{ color: '#fdf4a5', fontWeight: 900, fontSize: '12px', letterSpacing: '0.2em' }}>
-                {roomCode}
-              </span>
-              <span style={{ fontSize: '11px' }}>{codeCopied ? '✅' : '📋'}</span>
-            </button>
-          )}
-
-          {/* Connection dot */}
-          <div style={{
-            width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
-            background: connected ? '#22c55e' : '#ef4444',
-            boxShadow: connected ? '0 0 6px #22c55e' : '0 0 6px #ef4444',
-          }} className={connected ? '' : 'animate-pulse'} title={connected ? 'Connected' : 'Disconnected'} />
-
-          {/* Training mode */}
-          <button
-            onClick={() => { setTrainingMode(!trainingMode); SFX.click(); }}
-            title="Training mode (shows equity / pot odds)"
-            style={{
-              padding: '4px 7px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-              background: trainingMode ? 'rgba(88,28,135,0.5)' : 'rgba(30,30,30,0.5)',
-              color: trainingMode ? '#c4b5fd' : '#6b7280', fontSize: '12px', fontWeight: 700,
-              outline: trainingMode ? '1px solid rgba(168,85,247,0.4)' : '1px solid rgba(255,255,255,0.07)',
-              transition: 'all 0.2s',
-            }}
-          >🎓</button>
-
-          {/* Shortcuts help */}
-          <button
-            onClick={() => setShowShortcuts(v => !v)}
-            style={{
-              padding: '4px 7px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-              background: 'rgba(30,30,30,0.5)', color: '#6b7280', fontSize: '11px', fontWeight: 700,
-              outline: '1px solid rgba(255,255,255,0.07)',
-            }}
-            title="Keyboard shortcuts"
-          >⌨</button>
-
-          {/* Sidebar toggle (mobile) */}
-          <button
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(v => !v)}
-            style={{
-              padding: '4px 7px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-              background: 'rgba(30,30,30,0.5)', color: '#6b7280', fontSize: '12px', fontWeight: 700,
-              outline: '1px solid rgba(255,255,255,0.07)',
-            }}
-          >📋</button>
-        </div>
-      </div>
-
-      {/* Keyboard shortcuts overlay */}
+      {/* ── Keyboard shortcuts overlay (Highest Z) ── */}
       {showShortcuts && (
         <div
           style={{
-            position: 'fixed', inset: 0, zIndex: 100,
+            position: 'fixed', inset: 0, zIndex: 999,
             background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
@@ -236,153 +142,165 @@ export const GameScreen: React.FC = () => {
         </div>
       )}
 
-      {/* ── Body ── */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+      {/* ── Main Game Canvas (Full-Bleed) ── */}
+      <div className="relative flex-1 h-full overflow-hidden">
+        
+        {/* Table Canvas (Layer 0) */}
+        <div className="absolute inset-0 z-0 flex items-center justify-center p-2 sm:p-4">
+          <PokerTable gameState={gameState} myPlayerId={playerId} />
+        </div>
 
-        {/* Main column: table + actions */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
-
-          {/* Waiting room */}
-          {waitingForPlayers && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 12px', gap: '10px' }}
-              className="animate-slide-down">
-              <div style={{
-                padding: '10px 16px', borderRadius: '14px', textAlign: 'center',
-                background: 'rgba(6,20,6,0.85)', border: '1px solid rgba(74,222,128,0.15)',
+        {/* Top Floating HUD (Layer 10) */}
+        <div className="absolute top-0 left-0 w-full z-10 p-2 sm:p-4 border-b border-[#1a3a1a]/40 flex justify-between items-start pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(5,12,5,0.95) 0%, rgba(5,12,5,0) 100%)' }}>
+          {/* Left: logo + info */}
+          <div className="flex items-center gap-2 pointer-events-auto">
+            <span style={{ fontWeight: 900, fontSize: '15px' }}>
+              🃏 <span style={{
+                background: 'linear-gradient(90deg,#4ade80,#facc15)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>Poker</span>
+            </span>
+            <span style={{ color: '#374151', fontSize: '11px' }}>#{gameState.handNumber}</span>
+            {gameState.street !== 'finished' && gameState.phase === 'playing' && (
+              <span style={{
+                padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.5px',
+                background: streetInfo.bg, color: streetInfo.text,
               }}>
-                <p style={{ color: '#6b7280', fontSize: '13px', margin: '0 0 6px' }}>
-                  {gameState.players.length} player{gameState.players.length !== 1 ? 's' : ''} seated
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ color: '#9ca3af', fontSize: '12px' }}>Share code:</span>
-                  <button
-                    onClick={handleCopyCode}
-                    style={{
-                      background: codeCopied ? 'rgba(22,101,52,0.4)' : 'rgba(0,0,0,0.5)',
-                      border: 'none', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer',
-                      outline: '1px solid rgba(250,204,21,0.3)', transition: 'all 0.2s',
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                    }}
-                  >
-                    <span style={{ color: '#fde68a', fontWeight: 900, letterSpacing: '0.3em', fontSize: '15px' }}>{roomCode}</span>
-                    <span style={{ fontSize: '13px' }}>{codeCopied ? '✅' : '📋'}</span>
-                  </button>
-                </div>
-              </div>
-              <button
-                onClick={() => { startGame(); SFX.click(); }}
-                disabled={gameState.players.filter(p => p.stack > 0).length < 2}
+                {streetInfo.label}
+              </span>
+            )}
+          </div>
+
+          {/* Right: Controls */}
+          <div className="flex items-center gap-1.5 pointer-events-auto">
+            {roomCode && (
+              <button onClick={handleCopyCode} title="Copy invite link"
                 style={{
-                  padding: '12px 32px', borderRadius: '14px', border: 'none', cursor: 'pointer',
-                  fontWeight: 900, fontSize: '15px', letterSpacing: '0.3px',
-                  background: 'linear-gradient(135deg,#16a34a,#15803d)',
-                  boxShadow: '0 4px 24px rgba(22,163,74,0.4)',
-                  color: '#fff', transition: 'all 0.2s',
-                  opacity: gameState.players.filter(p => p.stack > 0).length < 2 ? 0.4 : 1,
-                }}
-              >
-                Start Game 🎲
+                  display: 'flex', alignItems: 'center', gap: '5px', padding: '3px 8px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                  background: codeCopied ? 'rgba(22,101,52,0.6)' : 'rgba(0,0,0,0.5)', outline: codeCopied ? '1px solid rgba(74,222,128,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                }}>
+                <span style={{ color: '#fdf4a5', fontWeight: 900, fontSize: '12px', letterSpacing: '0.1em' }}>{roomCode}</span>
+                <span style={{ fontSize: '11px' }}>{codeCopied ? '✅' : '📋'}</span>
               </button>
+            )}
+            <div style={{
+              width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+              background: connected ? '#22c55e' : '#ef4444', boxShadow: connected ? '0 0 6px #22c55e' : '0 0 6px #ef4444',
+            }} className={connected ? '' : 'animate-pulse'} />
+
+            <button onClick={() => { setTrainingMode(!trainingMode); SFX.click(); }} title="Training mode"
+              style={{
+                padding: '4px 7px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                background: trainingMode ? 'rgba(88,28,135,0.7)' : 'rgba(30,30,30,0.6)', color: trainingMode ? '#c4b5fd' : '#6b7280', fontSize: '12px',
+                outline: trainingMode ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(255,255,255,0.1)',
+              }}>🎓</button>
+            <button onClick={() => setShowShortcuts(v => !v)} title="Shortcuts"
+              style={{ padding: '4px 7px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'rgba(30,30,30,0.6)', color: '#6b7280', fontSize: '11px', outline: '1px solid rgba(255,255,255,0.1)' }}>⌨</button>
+            <button className="lg:hidden" onClick={() => setSidebarOpen(v => !v)}
+              style={{ padding: '4px 7px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'rgba(30,30,30,0.6)', color: '#6b7280', fontSize: '12px', outline: '1px solid rgba(255,255,255,0.1)' }}>📋</button>
+          </div>
+        </div>
+
+        {/* Center Canvas Overlay (Waiting Room) */}
+
+          {waitingForPlayers && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+              <div className="flex flex-col items-center p-4 gap-3 animate-slide-down pointer-events-auto">
+                <div style={{ padding: '12px 20px', borderRadius: '16px', textAlign: 'center', background: 'rgba(6,20,6,0.95)', border: '1px solid rgba(74,222,128,0.2)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                  <p style={{ color: '#9ca3af', fontSize: '14px', margin: '0 0 8px', fontWeight: 600 }}>
+                    {gameState.players.length} player{gameState.players.length !== 1 ? 's' : ''} seated
+                  </p>
+                  <div className="flex items-center gap-2 justify-center flex-wrap">
+                    <span style={{ color: '#6b7280', fontSize: '12px' }}>Copy Code to invite:</span>
+                    <button onClick={handleCopyCode} style={{ background: codeCopied ? 'rgba(22,101,52,0.5)' : 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '8px', padding: '5px 12px', cursor: 'pointer', outline: '1px solid rgba(250,204,21,0.4)', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#fde68a', fontWeight: 900, letterSpacing: '0.3em', fontSize: '16px' }}>{roomCode}</span>
+                    </button>
+                  </div>
+                </div>
+                <button onClick={() => { startGame(); SFX.click(); }} disabled={gameState.players.filter(p => p.stack > 0).length < 2}
+                  style={{ padding: '14px 40px', borderRadius: '999px', border: 'none', cursor: 'pointer', fontWeight: 900, fontSize: '16px', letterSpacing: '1px', textTransform: 'uppercase', background: 'linear-gradient(135deg,#16a34a,#15803d)', boxShadow: '0 8px 32px rgba(22,163,74,0.4)', color: '#fff', transition: 'all 0.2s', opacity: gameState.players.filter(p => p.stack > 0).length < 2 ? 0.4 : 1 }}>
+                  Start Game 🎲
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Poker Table */}
-          <div style={{ padding: '0 4px', flexShrink: 0 }} className="landscape-shrink">
-            <PokerTable gameState={gameState} myPlayerId={playerId} />
-          </div>
-
-          {/* Turn indicator */}
+          {/* Turn Indicator Floating Top-Center */}
           {gameState.phase === 'playing' && currentActingPlayer && (
-            <div style={{ textAlign: 'center', padding: '4px 0' }}>
+            <div className="absolute top-[12%] left-1/2 -translate-x-1/2 z-20 pointer-events-none">
               {isMyTurn ? (
-                <span style={{ color: '#fde68a', fontWeight: 700, fontSize: '13px', animation: 'glow 1.5s ease-in-out infinite' }}>
+                <div style={{ padding: '4px 16px', borderRadius: '999px', background: 'rgba(120,53,15,0.8)', border: '1px solid rgba(251,191,36,0.6)', color: '#fde68a', fontWeight: 900, fontSize: '14px', animation: 'glow 1.5s ease-in-out infinite', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
                   ⟳ Your turn!
-                </span>
+                </div>
               ) : (
-                <span style={{ color: '#4b5563', fontSize: '12px' }}>
-                  Waiting for <span style={{ color: '#9ca3af', fontWeight: 600 }}>{currentActingPlayer.name}</span>…
-                </span>
+                <div style={{ padding: '4px 16px', borderRadius: '999px', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+                  Waiting for <span style={{ color: '#e5e7eb', fontWeight: 700 }}>{currentActingPlayer.name}</span>…
+                </div>
               )}
             </div>
           )}
 
-          {/* My hole cards (large, bottom) */}
+          {/* My Hero Hole Cards (Bottom-Center, Absolute Canvas) */}
           {myPlayer?.holeCards && myPlayer.holeCards[0] !== '??' && myPlayer.status !== 'folded' && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
-              <div style={{ display: 'flex', gap: '6px', transform: isMyTurn ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.3s' }}>
+            <div className="absolute bottom-1 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1 pointer-events-none">
+              {isShowdown && (gameState.showdownResult?.playerEvals as any)?.[myPlayer.id] && (
+                <span style={{ fontSize: '12px', fontWeight: 900, padding: '6px 14px', borderRadius: '999px', background: 'rgba(120,80,0,0.8)', border: '1px solid rgba(250,204,21,0.5)', color: '#fde68a', animation: 'bounceIn 0.5s both', boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }} className="pointer-events-auto">
+                  {(gameState.showdownResult!.playerEvals as any)[myPlayer.id]?.label}
+                </span>
+              )}
+              <div style={{ display: 'flex', gap: '8px', transform: isMyTurn ? 'scale(1.2) translateY(-8px)' : 'scale(1.05)', transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }} className="pointer-events-auto drop-shadow-2xl">
                 {(myPlayer.holeCards as any[]).filter(c => c !== '??').map((card, i) => (
-                  <div key={i} style={{ filter: isMyTurn ? 'drop-shadow(0 0 12px rgba(251,191,36,0.6))' : 'none', transition: 'filter 0.3s' }}>
+                  <div key={i} style={{ filter: isMyTurn ? 'drop-shadow(0 0 16px rgba(251,191,36,0.8))' : 'drop-shadow(0 8px 16px rgba(0,0,0,0.6))', transition: 'filter 0.3s' }}>
                     <CardComponent card={card} size="lg" dealt delay={i * 100} />
                   </div>
                 ))}
               </div>
-              {isShowdown && (gameState.showdownResult?.playerEvals as any)?.[myPlayer.id] && (
-                <span style={{
-                  fontSize: '11px', fontWeight: 700, padding: '5px 10px', borderRadius: '10px',
-                  background: 'rgba(120,80,0,0.5)', border: '1px solid rgba(250,204,21,0.3)',
-                  color: '#fde68a', animation: 'bounceIn 0.5s both',
-                }}>
-                  {(gameState.showdownResult!.playerEvals as any)[myPlayer.id]?.label}
-                </span>
-              )}
             </div>
           )}
 
-          {/* Training mode info */}
+          {/* Training Mode Overlay (Floating Left) */}
           {trainingMode && isMyTurn && (equity || outs) && (
-            <div style={{
-              margin: '0 10px 6px', padding: '10px 12px', borderRadius: '12px',
-              background: 'rgba(88,28,135,0.2)', border: '1px solid rgba(168,85,247,0.25)',
-            }}>
-              <div style={{ fontWeight: 800, color: '#c4b5fd', marginBottom: '6px', fontSize: '12px' }}>🎓 Training Mode</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {equity && (
-                  <span style={{
-                    padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 700,
-                    background: equity.winPct > 50 ? 'rgba(22,101,52,0.6)' : 'rgba(127,29,29,0.6)',
-                    color: equity.winPct > 50 ? '#86efac' : '#fca5a5',
-                    border: `1px solid ${equity.winPct > 50 ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
-                  }}>
-                    Equity {equity.winPct.toFixed(1)}%
-                  </span>
-                )}
-                {potOdds > 0 && legalActions?.canCall && (
-                  <span style={{
-                    padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 700,
-                    background: equity && equity.winPct > potOdds ? 'rgba(22,101,52,0.6)' : 'rgba(120,53,15,0.6)',
-                    color: equity && equity.winPct > potOdds ? '#86efac' : '#fde68a',
-                    border: '1px solid rgba(245,158,11,0.25)',
-                  }}>
-                    Pot Odds {potOdds.toFixed(1)}% {equity && (equity.winPct > potOdds ? '✓' : '✗')}
-                  </span>
-                )}
-                {outs && outs.outs > 0 && (
-                  <span style={{
-                    padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 700,
-                    background: 'rgba(23,37,84,0.6)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.25)',
-                  }}>
-                    {outs.outs} outs ≈{outs.ruleOf4Pct}%
-                  </span>
-                )}
+            <div className="absolute bottom-24 sm:bottom-4 left-4 z-40 pointer-events-none">
+              <div className="pointer-events-auto p-3 rounded-2xl glass" style={{ background: 'rgba(88,28,135,0.7)', border: '1px solid rgba(168,85,247,0.4)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                <div style={{ fontWeight: 900, color: '#e9d5ff', marginBottom: '8px', fontSize: '13px' }}>🎓 Analysis</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {equity && (
+                    <span style={{ padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, background: equity.winPct > 50 ? 'rgba(22,101,52,0.8)' : 'rgba(127,29,29,0.8)', color: equity.winPct > 50 ? '#86efac' : '#fca5a5', border: `1px solid ${equity.winPct > 50 ? 'rgba(74,222,128,0.4)' : 'rgba(239,68,68,0.4)'}` }}>
+                      Eq: {equity.winPct.toFixed(1)}%
+                    </span>
+                  )}
+                  {potOdds > 0 && legalActions?.canCall && (
+                    <span style={{ padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, background: equity && equity.winPct > potOdds ? 'rgba(22,101,52,0.8)' : 'rgba(120,53,15,0.8)', color: equity && equity.winPct > potOdds ? '#86efac' : '#fde68a', border: '1px solid rgba(245,158,11,0.3)' }}>
+                      Pot Odds: {potOdds.toFixed(1)}% {equity && (equity.winPct > potOdds ? '✓' : '✗')}
+                    </span>
+                  )}
+                  {outs && outs.outs > 0 && (
+                    <span style={{ padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, background: 'rgba(30,58,138,0.8)', color: '#bfdbfe', border: '1px solid rgba(59,130,246,0.4)' }}>
+                      {outs.outs} Outs ≈{outs.ruleOf4Pct}%
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Action Panel */}
+          {/* Action Panel (Absolute Bottom-Right corner) */}
           {isMyTurn && legalActions && (
-            <div style={{ padding: '0 8px 8px' }} className="action-panel-shrink">
-              <ActionPanel
-                legal={legalActions}
-                gameState={gameState}
-                onAction={sendAction}
-                equity={trainingMode && equity ? equity.winPct : null}
-                potOdds={trainingMode ? potOdds : undefined}
-                outsCount={trainingMode && outs ? outs.outs : undefined}
-              />
+            <div className="absolute bottom-2 sm:bottom-4 right-2 sm:right-4 z-50 animate-slide-up action-panel-shrink">
+              <div className="glass shadow-2xl rounded-2xl p-2 sm:p-4 border border-green-500/20" style={{ background: 'rgba(5, 15, 5, 0.95)', minWidth: '280px' }}>
+                <ActionPanel
+                  legal={legalActions}
+                  gameState={gameState}
+                  onAction={sendAction}
+                  equity={trainingMode && equity ? equity.winPct : null}
+                  potOdds={trainingMode ? potOdds : undefined}
+                  outsCount={trainingMode && outs ? outs.outs : undefined}
+                />
+              </div>
             </div>
           )}
 
-          <div style={{ height: '8px', flexShrink: 0 }} />
         </div>
 
         {/* ── Desktop Sidebar ── */}
@@ -418,7 +336,6 @@ export const GameScreen: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 };

@@ -53,12 +53,13 @@ export const PokerTable: React.FC<PokerTableProps> = ({ gameState, myPlayerId })
   const showStreet = gameState.phase === 'playing' && gameState.street !== 'finished';
 
   return (
-    // Responsive aspect ratio: taller on mobile, more compact on desktop
-    <div className="relative w-full" style={{ paddingBottom: 'min(58%, 340px)' }}>
+    // Full-Bleed Native App Canvas constraint removal
+    <div className="relative w-full h-full max-h-[800px] mx-auto flex items-center justify-center">
 
-      {/* Table surface */}
-      <div className="absolute inset-x-2 inset-y-1 rounded-[50%] overflow-hidden"
+      {/* Table surface (Dynamically stretches but maintains elliptical visual limits) */}
+      <div className="absolute inset-x-1 sm:inset-x-8 inset-y-8 sm:inset-y-12 overflow-hidden"
         style={{
+          borderRadius: '50% / 45%', /* perfect dynamic ellipse */
           background: 'radial-gradient(ellipse at 40% 30%, #175c2a 0%, #0e3d1a 45%, #082c12 100%)',
           boxShadow: [
             'inset 0 0 60px rgba(0,0,0,0.7)',

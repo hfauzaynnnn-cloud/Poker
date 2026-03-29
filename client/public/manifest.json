@@ -1,0 +1,18 @@
+{
+  "name": "Poker",
+  "short_name": "Poker",
+  "description": "Multiplayer Texas Hold'em Poker with AI",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "theme_color": "#050c05",
+  "background_color": "#050c05",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
