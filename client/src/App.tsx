@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { usePokerStore } from './store/pokerStore';
 import MenuScreen from './screens/MenuScreen';
 import GameScreen from './screens/GameScreen';
+import { AuthScreen } from './screens/AuthScreen';
 import { ToastProvider } from './components/Toast';
 import { unlockAudio } from './services/SoundManager';
 
@@ -81,11 +82,13 @@ function WakeUpScreen() {
 }
 
 function App() {
-  const { connect, roomId, connected } = usePokerStore();
+  const { connect, roomId, connected, fetchMe, authUser } = usePokerStore();
   const [showWakeUp, setShowWakeUp] = useState(false);
 
   useEffect(() => {
-    connect();
+    fetchMe().then(() => {
+      connect();
+    });
     // Show wake-up screen only if we haven't connected after 2s
     const t = setTimeout(() => {
       if (!usePokerStore.getState().connected) setShowWakeUp(true);
@@ -115,6 +118,8 @@ function App() {
         <div className="game-content h-[100dvh]">
           {showWakeUp && !connected ? (
             <WakeUpScreen />
+          ) : !authUser ? (
+            <AuthScreen />
           ) : roomId ? (
             <GameScreen />
           ) : (

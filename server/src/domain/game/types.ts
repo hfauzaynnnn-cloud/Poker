@@ -23,6 +23,8 @@ export enum AIType {
 
 export interface Player {
   id: PlayerId;
+  /** Primary Key ID from PostgreSQL/SQLite for global chip tracking */
+  dbUserId?: string;
   name: string;
   seat: number;       // 0-based seat index
   stack: number;

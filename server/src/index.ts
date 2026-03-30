@@ -8,6 +8,32 @@ import { createInitialGameState, startNewHand, applyAction, getLegalActions } fr
 import { getAIDecision } from './services/aiDecisionMaker';
 import { Deck } from './domain/deck/deck';
 import { calculateEquity, calculateOuts, calcPotOdds } from './services/equity';
+import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+
+const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secure-jwt-secret-for-poker-app';
+
+async function getAuthUser(token?: string) {
+  if (!token) return null;
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+    return await prisma.user.findUnique({ where: { id: payload.userId } });
+  } catch {
+    return null;
+  }
+}
+
+export async function syncDatabase(room: Room) {
+  for (const p of room.state.players) {
+    if (p.dbUserId && p.aiType === AIType.HUMAN) {
+      await prisma.user.update({
+        where: { id: p.dbUserId },
+        data: { globalChips: p.stack },
+      }).catch(console.error);
+    }
+  }
+}
 
 // ─── Room Management ──────────────────────────────────────────────────────────
 
@@ -43,6 +69,12 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 const io = new IOServer(httpServer, {
   cors: { origin: CORS_ORIGIN, methods: ['GET', 'POST'] },
 });
+import cors from 'cors';
+import { authRouter } from './auth';
+
+app.use(cors({ origin: CORS_ORIGIN }));
+app.use(express.json());
+app.use('/api/auth', authRouter);
 
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
@@ -52,14 +84,17 @@ io.on('connection', (socket: Socket) => {
   console.log(`[+] Connected: ${socket.id}`);
 
   // ── Create Room ──────────────────────────────────────────────────────────
-  socket.on('create_room', (data: {
-    playerName: string;
+  socket.on('create_room', async (data: {
+    token?: string;
     smallBlind?: number;
     bigBlind?: number;
     startingStack?: number;
     numAI?: number;
     aiType?: AIType;
   }) => {
+    const user = await getAuthUser(data.token);
+    if (!user) return socket.emit('error', { message: 'Authentication required' });
+    if (user.globalChips <= 0) return socket.emit('error', { message: 'You have 0 chips! Wait for a gift or reset account.' });
     const roomId = uuidv4();
     const roomCode = generateRoomCode();
     const playerId = uuidv4();
@@ -73,7 +108,7 @@ io.on('connection', (socket: Socket) => {
 
     // Add AI players if requested
     const playerDefs: { id: string; name: string; aiType: AIType }[] = [
-      { id: playerId, name: data.playerName || 'Player 1', aiType: AIType.HUMAN },
+      { id: playerId, name: user.username, aiType: AIType.HUMAN },
     ];
 
     const numAI = Math.min(data.numAI ?? 0, 8);
@@ -90,6 +125,9 @@ io.on('connection', (socket: Socket) => {
       ...settings,
       maxPlayers: 9,
     });
+
+    state.players[0].stack = user.globalChips;
+    state.players[0].dbUserId = user.id;
 
     const room: Room = {
       roomId, roomCode, state,
@@ -108,7 +146,10 @@ io.on('connection', (socket: Socket) => {
   });
 
   // ── Join Room ────────────────────────────────────────────────────────────
-  socket.on('join_room', (data: { roomCode: string; playerName: string }) => {
+  socket.on('join_room', async (data: { token?: string; roomCode: string }) => {
+    const user = await getAuthUser(data.token);
+    if (!user) return socket.emit('error', { message: 'Authentication required' });
+
     const room = findRoomByCode(data.roomCode);
     if (!room) {
       socket.emit('error', { message: `Room "${data.roomCode}" not found` });
@@ -119,18 +160,27 @@ io.on('connection', (socket: Socket) => {
       return;
     }
 
+    // Check if player is already logged in at this table (reconnect handle fixes it, but ensure no dual-clients)
+    if (room.state.players.some(p => p.dbUserId === user.id)) {
+      socket.emit('error', { message: 'You are already at this table!' });
+      return;
+    }
+
     const humanPlayers = room.state.players.filter(p => p.aiType === AIType.HUMAN);
     if (humanPlayers.length >= room.state.settings.maxPlayers) {
       socket.emit('error', { message: 'Room is full' });
       return;
     }
 
+    if (user.globalChips <= 0) return socket.emit('error', { message: 'You have no chips left to join!' });
+
     const playerId = uuidv4();
     const newPlayer: Player = {
       id: playerId,
-      name: data.playerName || `Player ${humanPlayers.length + 1}`,
+      dbUserId: user.id,
+      name: user.username,
       seat: room.state.players.length,
-      stack: room.settings.startingStack,
+      stack: user.globalChips,
       holeCards: null,
       status: PlayerStatus.ACTIVE,
       aiType: AIType.HUMAN,
@@ -228,6 +278,7 @@ io.on('connection', (socket: Socket) => {
       broadcastState(room);
 
       if (room.state.phase === 'hand_over') {
+        syncDatabase(room);
         // Auto-start next hand after delay
         setTimeout(() => {
           if (rooms.has(room.roomId)) {
@@ -257,11 +308,10 @@ io.on('connection', (socket: Socket) => {
     if (!room) { socket.emit('error', { message: 'Room not found' }); return; }
     if (room.state.phase !== 'game_over') return;
 
-    // Reset all players
+    // Clean up community/pots but DO NOT reset player chips (since chips are global)
     room.state.players = room.state.players.map(p => ({
       ...p,
-      stack: room.state.settings.startingStack,
-      status: PlayerStatus.ACTIVE,
+      status: p.stack > 0 ? PlayerStatus.ACTIVE : PlayerStatus.ELIMINATED,
       holeCards: null,
       totalContributed: 0,
       roundContributed: 0,
@@ -305,6 +355,7 @@ io.on('connection', (socket: Socket) => {
     fromPl.stack -= data.amount;
     toPl.stack += data.amount;
 
+    syncDatabase(room);
     broadcastState(room);
   });
 

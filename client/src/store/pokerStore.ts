@@ -44,6 +44,14 @@ function saveSession(s: ActiveSession | null) {
   } catch {}
 }
 
+const AUTH_TOKEN_KEY = 'poker_auth_token';
+function loadAuthToken(): string | null {
+  try { return localStorage.getItem(AUTH_TOKEN_KEY); } catch { return null; }
+}
+function saveAuthToken(t: string | null) {
+  try { if (t) localStorage.setItem(AUTH_TOKEN_KEY, t); else localStorage.removeItem(AUTH_TOKEN_KEY); } catch {}
+}
+
 interface PokerStore {
   socket: Socket | null;
   roomId: string | null;
@@ -59,8 +67,12 @@ interface PokerStore {
   trainingMode: boolean;
   actionLog: string[];
   stats: SessionStats;
+  authToken: string | null;
+  authUser: { id: string, username: string, globalChips: number } | null;
 
   // Actions
+  setAuth: (token: string | null, user: any | null) => void;
+  fetchMe: () => Promise<void>;
   connect: () => void;
   disconnect: () => void;
   createRoom: (playerName: string, opts: CreateRoomOpts) => void;
@@ -98,6 +110,31 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
   trainingMode: false,
   actionLog: [],
   stats: loadStats(),
+  authToken: loadAuthToken(),
+  authUser: null,
+
+  setAuth: (token, user) => {
+    saveAuthToken(token);
+    set({ authToken: token, authUser: user });
+  },
+
+  fetchMe: async () => {
+    const token = get().authToken;
+    if (!token) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        set({ authUser: data.user });
+      } else {
+        saveAuthToken(null);
+        set({ authToken: null, authUser: null });
+      }
+    } catch {}
+  },
+
 
   connect: () => {
     if (get().socket?.connected) return;
@@ -260,19 +297,19 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
       set({ socket: null, connected: false, roomId: null, roomCode: null, playerId: null, gameState: null });
   },
 
-  createRoom: (playerName, opts) => {
+  createRoom: (_playerName, opts) => {
     const s = get();
     if (!s.socket?.connected) s.connect();
     setTimeout(() => {
-      get().socket?.emit('create_room', { playerName, ...opts });
+      get().socket?.emit('create_room', { ...opts, token: get().authToken });
     }, 300);
   },
 
-  joinRoom: (code, playerName) => {
+  joinRoom: (code, _playerName) => {
     const s = get();
     if (!s.socket?.connected) s.connect();
     setTimeout(() => {
-      get().socket?.emit('join_room', { roomCode: code.toUpperCase(), playerName });
+      get().socket?.emit('join_room', { roomCode: code.toUpperCase(), token: get().authToken });
     }, 300);
   },
 
@@ -298,8 +335,8 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
   },
 
   giftChips: (toId: string, amount: number) => {
-    const { socket, roomId, playerId } = get();
-    socket?.emit('gift_chips', { roomId, fromId: playerId, toId, amount });
+    const { socket, roomId } = get();
+    socket?.emit('gift_chips', { roomId, fromId: get().playerId, toId, amount });
   },
 
   setTrainingMode: (on) => set({ trainingMode: on }),

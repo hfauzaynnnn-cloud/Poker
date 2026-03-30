@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePokerStore } from '../store/pokerStore';
 import { AIType } from '../types';
 import { toastError } from '../components/Toast';
@@ -25,9 +25,8 @@ export const MenuScreen: React.FC = () => {
   const urlJoinCode = urlParams.get('join')?.toUpperCase() ?? '';
 
   const [tab, setTab] = useState<'create' | 'join'>(urlJoinCode ? 'join' : 'create');
-  const [name, setName] = useState(() => {
-    try { return localStorage.getItem('poker_player_name') || ''; } catch { return ''; }
-  });
+  const authUser = usePokerStore(s => s.authUser);
+  const fetchMe = usePokerStore(s => s.fetchMe);
   const [joinCode, setJoinCode]     = useState(urlJoinCode);
   const [smallBlind, setSmallBlind] = useState(10);
   const [bigBlind, setBigBlind]     = useState(20);
@@ -37,15 +36,10 @@ export const MenuScreen: React.FC = () => {
   const [creating, setCreating]     = useState(false);
   const [joining, setJoining]       = useState(false);
 
-  const nameRef = useRef<HTMLInputElement>(null);
-
-  // Focus name on mount
-  useEffect(() => { setTimeout(() => nameRef.current?.focus(), 100); }, []);
-
-  // Persist name
-  useEffect(() => {
-    try { if (name) localStorage.setItem('poker_player_name', name); } catch {}
-  }, [name]);
+  // Fetch latest chips on mount
+  useEffect(() => { 
+    fetchMe();
+  }, []);
 
   // Show errors as toasts and clear from store
   useEffect(() => {
@@ -65,20 +59,21 @@ export const MenuScreen: React.FC = () => {
   };
 
   const handleCreate = () => {
-    if (!name.trim()) { toastError('Enter your name first'); SFX.error(); return; }
+    if (!authUser) return;
     if (!connected) { toastError('Still connecting to server…'); SFX.error(); return; }
+    if (authUser.globalChips < startStack) { toastError('Not enough chips in bankroll!'); SFX.error(); return; }
     setCreating(true);
     SFX.click();
-    createRoom(name.trim(), { smallBlind, bigBlind, startingStack: startStack, numAI, aiType });
+    createRoom(authUser.username, { smallBlind, bigBlind, startingStack: startStack, numAI, aiType });
   };
 
   const handleJoin = () => {
-    if (!name.trim()) { toastError('Enter your name first'); SFX.error(); return; }
+    if (!authUser) return;
     if (joinCode.length < 6) { toastError('Enter the 6-letter room code'); SFX.error(); return; }
     if (!connected) { toastError('Still connecting to server…'); SFX.error(); return; }
     setJoining(true);
     SFX.click();
-    joinRoom(joinCode.trim(), name.trim());
+    joinRoom(joinCode.trim(), authUser.username);
   };
 
 // Removed unused handleCopyServerUrl
@@ -175,29 +170,7 @@ export const MenuScreen: React.FC = () => {
             ))}
           </div>
 
-          {/* ── Name input (shared) ── */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', color: '#6b7280', fontSize: '10px',
-              fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '6px' }}>
-              Your Name
-            </label>
-            <input
-              ref={nameRef}
-              style={{
-                width: '100%', padding: '12px 14px', borderRadius: '12px',
-                background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(74,222,128,0.2)',
-                color: '#fff', fontSize: '15px', fontWeight: 600, outline: 'none',
-                transition: 'border-color 0.2s', boxSizing: 'border-box',
-              }}
-              onFocus={e => e.target.style.borderColor = 'rgba(74,222,128,0.55)'}
-              onBlur={e => e.target.style.borderColor = 'rgba(74,222,128,0.2)'}
-              placeholder="Enter your name…"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              maxLength={20}
-              onKeyDown={e => { if (e.key === 'Enter') tab === 'create' ? handleCreate() : handleJoin(); }}
-            />
-          </div>
+
 
           {/* ── CREATE TAB ── */}
           {tab === 'create' ? (
@@ -272,13 +245,13 @@ export const MenuScreen: React.FC = () => {
               <button
                 className="btn-press"
                 onClick={handleCreate}
-                disabled={!name.trim() || creating}
+                disabled={creating}
                 style={{
                   width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                  fontWeight: 900, fontSize: '15px', cursor: name.trim() ? 'pointer' : 'not-allowed',
-                  background: name.trim() ? 'linear-gradient(135deg,#15803d,#166534)' : 'rgba(55,65,81,0.5)',
+                  fontWeight: 900, fontSize: '15px', cursor: 'pointer',
+                  background: 'linear-gradient(135deg,#15803d,#166534)',
                   color: '#fff', letterSpacing: '0.5px',
-                  boxShadow: name.trim() ? '0 4px 20px rgba(22,163,74,0.4)' : 'none',
+                  boxShadow: '0 4px 20px rgba(22,163,74,0.4)',
                   transition: 'all 0.2s', opacity: creating ? 0.7 : 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 }}
@@ -346,14 +319,14 @@ export const MenuScreen: React.FC = () => {
               <button
                 className="btn-press"
                 onClick={handleJoin}
-                disabled={!name.trim() || joinCode.length < 6 || joining}
+                disabled={joinCode.length < 6 || joining}
                 style={{
                   width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
                   fontWeight: 900, fontSize: '15px',
-                  cursor: (name.trim() && joinCode.length >= 6) ? 'pointer' : 'not-allowed',
-                  background: (name.trim() && joinCode.length >= 6) ? 'linear-gradient(135deg,#1d4ed8,#1e40af)' : 'rgba(55,65,81,0.5)',
+                  cursor: (joinCode.length >= 6) ? 'pointer' : 'not-allowed',
+                  background: (joinCode.length >= 6) ? 'linear-gradient(135deg,#1d4ed8,#1e40af)' : 'rgba(55,65,81,0.5)',
                   color: '#fff', letterSpacing: '0.5px',
-                  boxShadow: (name.trim() && joinCode.length >= 6) ? '0 4px 20px rgba(59,130,246,0.4)' : 'none',
+                  boxShadow: (joinCode.length >= 6) ? '0 4px 20px rgba(59,130,246,0.4)' : 'none',
                   transition: 'all 0.2s', opacity: joining ? 0.7 : 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 }}
