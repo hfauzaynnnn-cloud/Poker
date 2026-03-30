@@ -1,4 +1,5 @@
 import { Card, Rank, Suit, ALL_RANKS, ALL_SUITS } from '../cards/types';
+import crypto from 'crypto';
 
 // ─── Seeded PRNG (mulberry32) ─────────────────────────────────────────────────
 
@@ -42,10 +43,11 @@ export class Deck {
     this.cards = cards;
   }
 
-  /** Standard random-shuffle deck */
+  /** Standard cryptographically secure random-shuffle deck */
   static create(): Deck {
     const cards = buildDeck();
-    return new Deck(fisherYates(cards, Math.random));
+    const cryptoRng = () => crypto.randomBytes(4).readUInt32LE(0) / 0x100000000;
+    return new Deck(fisherYates(cards, cryptoRng));
   }
 
   /** Deterministic deck for testing */
@@ -62,7 +64,8 @@ export class Deck {
 
   reset(): void {
     const cards = buildDeck();
-    this.cards = fisherYates(cards, Math.random);
+    const cryptoRng = () => crypto.randomBytes(4).readUInt32LE(0) / 0x100000000;
+    this.cards = fisherYates(cards, cryptoRng);
     this.cursor = 0;
   }
 

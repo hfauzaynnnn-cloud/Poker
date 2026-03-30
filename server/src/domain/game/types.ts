@@ -37,6 +37,8 @@ export interface Player {
   roundContributed: number;
   /** Whether we have had a chance to act this betting round */
   hasActedThisRound: boolean;
+  /** Dynamically evaluated hand strength string (e.g. 'Pair of Aces') built during sanitizeState */
+  currentHandName?: string;
 }
 
 export enum Street {

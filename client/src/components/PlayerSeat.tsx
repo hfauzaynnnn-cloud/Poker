@@ -63,21 +63,35 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
         transition: 'all 0.3s ease',
       }}
     >
-      {/* Hand label at showdown */}
-      {handLabel && !isFolded && (
+      {/* Current/Live Hand Status (Pre-showdown or Showdown) */}
+      {(handLabel || player.currentHandName) && !isFolded && (
         <div
           className={isWinner ? 'animate-bounce-in' : ''}
           style={{
-            fontSize: '8px', fontWeight: 800, padding: '2px 7px', borderRadius: '999px',
-            marginBottom: '2px', textAlign: 'center',
-            maxWidth: '90px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            background: isWinner ? 'linear-gradient(135deg,rgba(133,77,14,0.9),rgba(180,83,9,0.9))' : 'rgba(0,0,0,0.65)',
-            border: isWinner ? '1px solid rgba(250,204,21,0.6)' : '1px solid rgba(255,255,255,0.08)',
-            color: isWinner ? '#fde68a' : '#9ca3af',
-            boxShadow: isWinner ? '0 0 12px rgba(250,204,21,0.2)' : 'none',
+            fontSize: '9px', fontWeight: 800, padding: '3px 8px', borderRadius: '999px',
+            marginBottom: '4px', textAlign: 'center',
+            maxWidth: '110px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            background: isWinner ? 'linear-gradient(135deg,rgba(133,77,14,0.9),rgba(180,83,9,0.9))' : 'rgba(30,58,138,0.8)',
+            border: isWinner ? '1px solid rgba(250,204,21,0.6)' : '1px solid rgba(147,197,253,0.3)',
+            color: isWinner ? '#fde68a' : '#bfdbfe',
+            boxShadow: isWinner ? '0 0 12px rgba(250,204,21,0.4)' : '0 0 8px rgba(59,130,246,0.3)',
+            zIndex: 20,
           }}
         >
-          {isWinner && '🏆 '}{handLabel}
+          {isWinner && '🏆 '}{handLabel || player.currentHandName}
+        </div>
+      )}
+
+      {/* Floating Bet Contribution (Positioned prominently above cards) */}
+      {potContrib > 0 && !isFolded && (
+        <div style={{
+          position: 'absolute', top: '-25px', left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(251,191,36,0.5)',
+          padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 900,
+          color: '#fde047', display: 'flex', alignItems: 'center', gap: '4px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)', zIndex: 30,
+        }}>
+          💰 ${potContrib.toLocaleString()}
         </div>
       )}
 
@@ -176,11 +190,6 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
         {isAllIn   && <span style={{ fontSize: '8px', padding: '1px 5px', borderRadius: '999px', background: 'rgba(146,64,14,0.8)', color: '#fde68a', fontWeight: 700 }}>ALL-IN</span>}
         {isSitting && <span style={{ fontSize: '8px', padding: '1px 5px', borderRadius: '999px', background: 'rgba(55,65,81,0.7)', color: '#9ca3af', fontWeight: 700 }}>AWAY</span>}
         {isElim    && <span style={{ fontSize: '8px', padding: '1px 5px', borderRadius: '999px', background: 'rgba(127,29,29,0.8)', color: '#fca5a5', fontWeight: 700 }}>BUST</span>}
-
-        {/* Current bet contribution */}
-        {potContrib > 0 && !isFolded && (
-          <span style={{ fontSize: '9px', color: '#fcd34d', fontWeight: 700 }}>+${potContrib.toLocaleString()}</span>
-        )}
 
         {/* Winner amount */}
         {isWinner && wonAmount > 0 && (

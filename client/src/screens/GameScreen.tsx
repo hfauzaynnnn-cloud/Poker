@@ -199,6 +199,8 @@ export const GameScreen: React.FC = () => {
               style={{ padding: '4px 7px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'rgba(30,30,30,0.6)', color: '#6b7280', fontSize: '11px', outline: '1px solid rgba(255,255,255,0.1)' }}>⌨</button>
             <button className="lg:hidden" onClick={() => setSidebarOpen(v => !v)}
               style={{ padding: '4px 7px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'rgba(30,30,30,0.6)', color: '#6b7280', fontSize: '12px', outline: '1px solid rgba(255,255,255,0.1)' }}>📋</button>
+            <button onClick={() => { usePokerStore.getState().leaveRoom(); }} title="Leave Table"
+              style={{ padding: '4px 8px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: 'rgba(239,68,68,0.2)', color: '#fca5a5', fontSize: '12px', outline: '1px solid rgba(239,68,68,0.4)', fontWeight: 800 }}>🚪 Leave</button>
           </div>
         </div>
 
@@ -236,10 +238,16 @@ export const GameScreen: React.FC = () => {
                 <p style={{ margin: 0, color: '#e9d5ff', fontSize: '15px', textAlign: 'center', fontWeight: 600 }}>
                   {gameState.players.filter(p => p.stack > 0).map(p => p.name).join(', ')} won all the chips!
                 </p>
-                <button onClick={() => { usePokerStore.getState().playAgain(); SFX.click(); }}
-                  style={{ marginTop: '10px', padding: '14px 40px', borderRadius: '999px', border: 'none', cursor: 'pointer', fontWeight: 900, fontSize: '16px', letterSpacing: '1px', textTransform: 'uppercase', background: 'linear-gradient(135deg,#f59e0b,#ea580c)', boxShadow: '0 8px 32px rgba(234,88,12,0.4)', color: '#fff', transition: 'all 0.2s' }}>
-                  Play Again 🔄
-                </button>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                  <button onClick={() => { usePokerStore.getState().playAgain(); SFX.click(); }}
+                    style={{ padding: '14px 28px', borderRadius: '999px', border: 'none', cursor: 'pointer', fontWeight: 900, fontSize: '16px', letterSpacing: '1px', textTransform: 'uppercase', background: 'linear-gradient(135deg,#f59e0b,#ea580c)', boxShadow: '0 8px 32px rgba(234,88,12,0.4)', color: '#fff', transition: 'all 0.2s' }}>
+                    Play Again 🔄
+                  </button>
+                  <button onClick={() => { usePokerStore.getState().leaveRoom(); }}
+                    style={{ padding: '14px 28px', borderRadius: '999px', border: '2px solid rgba(239,68,68,0.5)', cursor: 'pointer', fontWeight: 900, fontSize: '16px', letterSpacing: '1px', textTransform: 'uppercase', background: 'rgba(0,0,0,0.5)', color: '#fca5a5', transition: 'all 0.2s' }}>
+                    Leave Table 🚪
+                  </button>
+                </div>
               </div>
             </div>
           )}

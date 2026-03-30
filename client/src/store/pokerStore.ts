@@ -85,6 +85,7 @@ interface PokerStore {
   resetStats: () => void;
   playAgain: () => void;
   giftChips: (toId: string, amount: number) => void;
+  leaveRoom: () => void;
 }
 
 interface CreateRoomOpts {
@@ -337,6 +338,24 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
   giftChips: (toId: string, amount: number) => {
     const { socket, roomId } = get();
     socket?.emit('gift_chips', { roomId, fromId: get().playerId, toId, amount });
+  },
+
+  leaveRoom: () => {
+    const { socket, roomId } = get();
+    if (socket && roomId) {
+      socket.emit('leave_table', { roomId });
+    }
+    saveSession(null);
+    set({
+      gameState: null,
+      roomId: null,
+      roomCode: null,
+      playerId: null,
+      actionLog: [],
+      error: null
+    });
+    // Immediately fetch user chips to securely update the UI bankroll
+    get().fetchMe();
   },
 
   setTrainingMode: (on) => set({ trainingMode: on }),

@@ -8,6 +8,7 @@ import { createInitialGameState, startNewHand, applyAction, getLegalActions } fr
 import { getAIDecision } from './services/aiDecisionMaker';
 import { Deck } from './domain/deck/deck';
 import { calculateEquity, calculateOuts, calcPotOdds } from './services/equity';
+import { evaluateSevenCards } from './domain/evaluator/handEvaluator';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 
@@ -402,6 +403,30 @@ io.on('connection', (socket: Socket) => {
     } catch {}
   });
 
+  // ── Leave Table ──────────────────────────────────────────────────────────
+  socket.on('leave_table', (data: { roomId: string }) => {
+    const room = rooms.get(data.roomId);
+    if (!room) return;
+    if (room.socketToPlayer.has(socket.id)) {
+      const pid = room.socketToPlayer.get(socket.id)!;
+      room.socketToPlayer.delete(socket.id);
+      
+      // If phase is wait or game_over, we can literally outright remove them
+      if (room.state.phase === 'waiting' || room.state.phase === 'game_over') {
+        room.state.players = room.state.players.filter(p => p.id !== pid);
+      } else {
+        // Otherwise gracefully mark them sitting out until the hand safely wraps
+        room.state.players = room.state.players.map(p =>
+          p.id === pid ? { ...p, status: PlayerStatus.SITTING_OUT } : p
+        );
+      }
+      
+      socket.leave(room.roomId);
+      io.to(room.roomId).emit('player_disconnected', { playerId: pid });
+      broadcastState(room);
+    }
+  });
+
   // ── Disconnect ───────────────────────────────────────────────────────────
   socket.on('disconnect', () => {
     console.log(`[-] Disconnected: ${socket.id}`);
@@ -493,16 +518,25 @@ function sanitizeState(state: GameState, playerId: string | null): any {
 
   return {
     ...state,
-    players: state.players.map(p => ({
-      ...p,
-      holeCards: p.id === playerId
-        ? p.holeCards          // show own cards
-        : isShowdown && p.status !== PlayerStatus.FOLDED
-        ? p.holeCards          // reveal at showdown (non-folded)
-        : p.holeCards
-        ? ['??', '??']         // hidden
-        : null,
-    })),
+    players: state.players.map(p => {
+      let currentHandName = undefined;
+      // Evaluate hand strength live if we have enough community cards
+      if (p.id === playerId && p.holeCards && p.holeCards.length === 2 && state.communityCards.length >= 3) {
+        currentHandName = evaluateSevenCards([...p.holeCards, ...state.communityCards]).label;
+      }
+
+      return {
+        ...p,
+        currentHandName,
+        holeCards: p.id === playerId
+          ? p.holeCards          // show own cards
+          : isShowdown && p.status !== PlayerStatus.FOLDED
+          ? p.holeCards          // reveal at showdown (non-folded)
+          : p.holeCards
+          ? ['??', '??']         // hidden
+          : null,
+      };
+    }),
   };
 }
 
