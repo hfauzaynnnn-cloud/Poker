@@ -61,7 +61,7 @@ export const MenuScreen: React.FC = () => {
   const handleCreate = () => {
     if (!authUser) return;
     if (!connected) { toastError('Still connecting to server…'); SFX.error(); return; }
-    if (authUser.globalChips < startStack) { toastError('Not enough chips in bankroll!'); SFX.error(); return; }
+    // TEMPORARY QA CHEAT: Removed frontend chip validation so testers can build rooms
     setCreating(true);
     SFX.click();
     createRoom(authUser.username, { smallBlind, bigBlind, startingStack: startStack, numAI, aiType });

@@ -95,7 +95,10 @@ io.on('connection', (socket: Socket) => {
   }) => {
     const user = await getAuthUser(data.token);
     if (!user) return socket.emit('error', { message: 'Authentication required' });
-    if (user.globalChips <= 0) return socket.emit('error', { message: 'You have 0 chips! Wait for a gift or reset account.' });
+    // TEMPORARY QA CHEAT: Give players infinite chips so they don't get locked out during testing
+    if (user.globalChips <= 0) {
+      user.globalChips = 1000;
+    }
     const roomId = uuidv4();
     const roomCode = generateRoomCode();
     const playerId = uuidv4();
