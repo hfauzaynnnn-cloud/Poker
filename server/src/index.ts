@@ -236,7 +236,11 @@ io.on('connection', (socket: Socket) => {
               room.state = startNewHand(room.state, room.deck);
               broadcastState(room);
               scheduleAIIfNeeded(room);
-            } catch {}
+            } catch {
+              // Hand cannot start (likely < 2 players left with chips)
+              room.state.phase = 'game_over';
+              broadcastState(room);
+            }
           }
         }, 4000);
       } else {
@@ -245,6 +249,63 @@ io.on('connection', (socket: Socket) => {
     } catch (err: any) {
       socket.emit('error', { message: err.message });
     }
+  });
+
+  // ── Play Again / Restart Game ────────────────────────────────────────────
+  socket.on('play_again', (data: { roomId: string }) => {
+    const room = rooms.get(data.roomId);
+    if (!room) { socket.emit('error', { message: 'Room not found' }); return; }
+    if (room.state.phase !== 'game_over') return;
+
+    // Reset all players
+    room.state.players = room.state.players.map(p => ({
+      ...p,
+      stack: room.state.settings.startingStack,
+      status: PlayerStatus.ACTIVE,
+      holeCards: null,
+      totalContributed: 0,
+      roundContributed: 0,
+    }));
+    room.state.pots = [];
+    room.state.communityCards = [];
+    room.state.showdownResult = null;
+    room.state.winnerText = null;
+
+    try {
+      room.deck = Deck.create();
+      room.state = startNewHand(room.state, room.deck);
+      broadcastState(room);
+      scheduleAIIfNeeded(room);
+    } catch (err: any) {
+      socket.emit('error', { message: err.message });
+    }
+  });
+
+  // ── Gift Chips ───────────────────────────────────────────────────────────
+  socket.on('gift_chips', (data: { roomId: string; fromId: string; toId: string; amount: number }) => {
+    const room = rooms.get(data.roomId);
+    if (!room) return;
+
+    const socketPlayerId = room.socketToPlayer.get(socket.id);
+    if (socketPlayerId !== data.fromId) {
+      socket.emit('error', { message: 'Unauthorized' }); return;
+    }
+
+    if (data.fromId === data.toId) return;
+    if (data.amount <= 0 || !Number.isInteger(data.amount)) return;
+
+    const fromPl = room.state.players.find(p => p.id === data.fromId);
+    const toPl = room.state.players.find(p => p.id === data.toId);
+
+    if (!fromPl || !toPl) return;
+    if (fromPl.stack < data.amount) {
+      socket.emit('error', { message: 'Not enough chips' }); return;
+    }
+
+    fromPl.stack -= data.amount;
+    toPl.stack += data.amount;
+
+    broadcastState(room);
   });
 
   // ── Get Legal Actions ────────────────────────────────────────────────────

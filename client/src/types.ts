@@ -124,7 +124,7 @@ export interface GameState {
   lastFullRaiseSize: number;
   actionHistory: Action[];
   showdownResult: ShowdownResult | null;
-  phase: 'waiting' | 'playing' | 'hand_over';
+  phase: 'waiting' | 'playing' | 'hand_over' | 'game_over';
   winnerText: string | null;
   sequenceCounter: number;
 }

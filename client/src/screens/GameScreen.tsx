@@ -226,6 +226,24 @@ export const GameScreen: React.FC = () => {
             </div>
           )}
 
+          {/* Game Over / Restart Canvas Overlay */}
+          {gameState.phase === 'game_over' && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+              <div className="flex flex-col items-center p-6 gap-4 animate-bounce-in pointer-events-auto" style={{ background: 'linear-gradient(135deg, rgba(88,28,135,0.95), rgba(30,10,60,0.95))', borderRadius: '24px', border: '1px solid rgba(168,85,247,0.4)', boxShadow: '0 16px 64px rgba(0,0,0,0.8)', maxWidth: '90%' }}>
+                <h2 style={{ margin: 0, fontSize: '28px', fontWeight: 900, background: 'linear-gradient(90deg, #facc15, #f97316)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textAlign: 'center' }}>
+                  🏆 Game Over
+                </h2>
+                <p style={{ margin: 0, color: '#e9d5ff', fontSize: '15px', textAlign: 'center', fontWeight: 600 }}>
+                  {gameState.players.filter(p => p.stack > 0).map(p => p.name).join(', ')} won all the chips!
+                </p>
+                <button onClick={() => { usePokerStore.getState().playAgain(); SFX.click(); }}
+                  style={{ marginTop: '10px', padding: '14px 40px', borderRadius: '999px', border: 'none', cursor: 'pointer', fontWeight: 900, fontSize: '16px', letterSpacing: '1px', textTransform: 'uppercase', background: 'linear-gradient(135deg,#f59e0b,#ea580c)', boxShadow: '0 8px 32px rgba(234,88,12,0.4)', color: '#fff', transition: 'all 0.2s' }}>
+                  Play Again 🔄
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Turn Indicator Floating Top-Center */}
           {gameState.phase === 'playing' && currentActingPlayer && (
             <div className="absolute top-[12%] left-1/2 -translate-x-1/2 z-20 pointer-events-none">
@@ -434,7 +452,21 @@ const SidebarContent: React.FC<SidebarProps> = ({
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px' }}>
                   {p.name}{p.id === playerId ? ' (me)' : ''}
                 </span>
-                <span style={{ fontWeight: 700, color: p.stack <= 0 ? '#f87171' : '#4ade80' }}>${p.stack.toLocaleString()}</span>
+                <span style={{ fontWeight: 700, color: p.stack <= 0 ? '#f87171' : '#4ade80' }}>
+                  ${p.stack.toLocaleString()}
+                  {p.id !== playerId && myPlayer && myPlayer.stack > 0 && (
+                    <button onClick={() => {
+                      const str = prompt(`How many chips to gift ${p.name}? (Your max: ${myPlayer.stack})`);
+                      if (!str) return;
+                      const amt = parseInt(str.replace(/\D/g, ''), 10);
+                      if (isNaN(amt) || amt <= 0 || amt > myPlayer.stack) {
+                        alert('Invalid amount');
+                        return;
+                      }
+                      usePokerStore.getState().giftChips(p.id, amt);
+                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', marginLeft: '6px', fontSize: '12px' }} title="Gift Chips">🎁</button>
+                  )}
+                </span>
               </div>
             ))}
         </div>

@@ -71,6 +71,8 @@ interface PokerStore {
   setTrainingMode: (on: boolean) => void;
   clearError: () => void;
   resetStats: () => void;
+  playAgain: () => void;
+  giftChips: (toId: string, amount: number) => void;
 }
 
 interface CreateRoomOpts {
@@ -288,6 +290,16 @@ export const usePokerStore = create<PokerStore>((set, get) => ({
   requestEquity: () => {
     const { socket, roomId, playerId } = get();
     socket?.emit('get_equity', { roomId, playerId });
+  },
+
+  playAgain: () => {
+    const { socket, roomId } = get();
+    socket?.emit('play_again', { roomId });
+  },
+
+  giftChips: (toId: string, amount: number) => {
+    const { socket, roomId, playerId } = get();
+    socket?.emit('gift_chips', { roomId, fromId: playerId, toId, amount });
   },
 
   setTrainingMode: (on) => set({ trainingMode: on }),

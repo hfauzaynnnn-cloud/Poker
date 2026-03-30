@@ -121,7 +121,7 @@ export interface GameState {
   allInThisRound: PlayerId[];
   showdownResult: ShowdownResult | null;
   /** Whether game is waiting for players */
-  phase: 'waiting' | 'playing' | 'hand_over';
+  phase: 'waiting' | 'playing' | 'hand_over' | 'game_over';
   /** The hand winner announcement text */
   winnerText: string | null;
   sequenceCounter: number;
