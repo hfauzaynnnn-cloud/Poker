@@ -59,6 +59,7 @@ export interface Player {
   totalContributed: number;
   roundContributed: number;
   hasActedThisRound: boolean;
+  currentHandName?: string;
 }
 
 export interface Pot {
