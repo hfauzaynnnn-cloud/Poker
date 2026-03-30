@@ -173,7 +173,10 @@ io.on('connection', (socket: Socket) => {
       return;
     }
 
-    if (user.globalChips <= 0) return socket.emit('error', { message: 'You have no chips left to join!' });
+    // TEMPORARY QA CHEAT: Give players infinite chips so they don't get locked out during testing
+    if (user.globalChips <= 0) {
+      user.globalChips = 1000;
+    }
 
     const playerId = uuidv4();
     const newPlayer: Player = {
@@ -310,9 +313,11 @@ io.on('connection', (socket: Socket) => {
     if (room.state.phase !== 'game_over') return;
 
     // Clean up community/pots but DO NOT reset player chips (since chips are global)
+    // TEMPORARY QA CHEAT: Auto-refill bankrupted players to 1000 chips for testing purposes!
     room.state.players = room.state.players.map(p => ({
       ...p,
-      status: p.stack > 0 ? PlayerStatus.ACTIVE : PlayerStatus.ELIMINATED,
+      stack: p.stack <= 0 ? 1000 : p.stack, // Magical infinite reload 
+      status: PlayerStatus.ACTIVE, // Everyone is magically active again
       holeCards: null,
       totalContributed: 0,
       roundContributed: 0,

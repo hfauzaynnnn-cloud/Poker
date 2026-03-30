@@ -51,11 +51,18 @@ export function createInitialGameState(
 // ─── Hand Start ───────────────────────────────────────────────────────────────
 
 export function startNewHand(prevState: GameState, deck?: Deck): GameState {
-  let state = { ...prevState };
+  // TEMPORARY QA CHEAT: Magically auto-refill anyone who bankrupted in the previous hand to 1000 chips instantly
+  let state = {
+    ...prevState,
+    players: prevState.players.map(p => ({
+      ...p,
+      stack: p.stack <= 0 && p.status !== PlayerStatus.SITTING_OUT ? 1000 : p.stack,
+    }))
+  };
 
   // Remove eliminated players
-  const activePlayers = prevState.players.filter(
-    p => p.stack > 0 && p.status !== PlayerStatus.ELIMINATED
+  const activePlayers = state.players.filter(
+    p => p.stack > 0 && p.status !== PlayerStatus.ELIMINATED && p.status !== PlayerStatus.SITTING_OUT
   );
 
   if (activePlayers.length < 2) {
@@ -66,10 +73,11 @@ export function startNewHand(prevState: GameState, deck?: Deck): GameState {
   const newButtonSeat = nextOccupiedSeat(activePlayers, prevState.buttonSeat);
 
   // Reset all player state for new hand
-  const players: Player[] = prevState.players.map(p => ({
+  const players: Player[] = state.players.map(p => ({
     ...p,
     holeCards: null,
-    status: p.stack > 0 ? PlayerStatus.ACTIVE : PlayerStatus.ELIMINATED,
+    // Sitting out players remain sitting out, everyone else is Active or Eliminated (though QA cheat saves bankrupts)
+    status: p.status === PlayerStatus.SITTING_OUT ? PlayerStatus.SITTING_OUT : (p.stack > 0 ? PlayerStatus.ACTIVE : PlayerStatus.ELIMINATED),
     totalContributed: 0,
     roundContributed: 0,
     hasActedThisRound: false,
