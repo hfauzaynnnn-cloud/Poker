@@ -124,18 +124,24 @@ export const MenuScreen: React.FC = () => {
           </p>
 
           {/* Connection indicator */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px',
-            padding: '4px 12px', borderRadius: '999px',
-            background: connected ? 'rgba(22,101,52,0.3)' : 'rgba(127,29,29,0.3)',
-            border: `1px solid ${connected ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
-          }}>
-            <div style={{
-              position: 'relative', width: '8px', height: '8px',
-              borderRadius: '50%', background: connected ? '#22c55e' : '#ef4444',
-              boxShadow: connected ? '0 0 6px #22c55e' : '0 0 6px #ef4444',
-            }} className={connected ? 'pulse-ring' : ''} />
-            <span style={{ fontSize: '11px', fontWeight: 600, color: connected ? '#86efac' : '#fca5a5' }}>
-              {connected ? 'Server Online' : 'Connecting…'}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '4px 12px', borderRadius: '999px',
+              background: connected ? 'rgba(22,101,52,0.3)' : 'rgba(127,29,29,0.3)',
+              border: `1px solid ${connected ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            }}>
+              <div style={{
+                position: 'relative', width: '8px', height: '8px',
+                borderRadius: '50%', background: connected ? '#22c55e' : '#ef4444',
+                boxShadow: connected ? '0 0 6px #22c55e' : '0 0 6px #ef4444',
+              }} className={connected ? 'pulse-ring' : ''} />
+              <span style={{ fontSize: '11px', fontWeight: 600, color: connected ? '#86efac' : '#fca5a5' }}>
+                {connected ? 'Server Online' : 'Connecting…'}
+              </span>
+            </div>
+            {/* Extremely precise debug URL the user requested so they know what DB Vercel is connected to */}
+            <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+              {import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'}
             </span>
           </div>
         </div>
