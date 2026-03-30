@@ -143,10 +143,10 @@ export const GameScreen: React.FC = () => {
       )}
 
       {/* ── Main Game Canvas (Full-Bleed) ── */}
-      <div className="relative flex-1 h-full overflow-hidden">
+      <div className="relative flex-1 flex flex-col overflow-hidden" style={{ minHeight: '100dvh' }}>
         
         {/* Table Canvas (Layer 0) */}
-        <div className="absolute inset-0 z-0 flex items-center justify-center p-2 sm:p-4">
+        <div className="absolute inset-0 z-0 p-2 sm:p-4">
           <PokerTable gameState={gameState} myPlayerId={playerId} />
         </div>
 

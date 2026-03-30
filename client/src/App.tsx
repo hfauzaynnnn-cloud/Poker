@@ -112,7 +112,7 @@ function App() {
           </p>
         </div>
 
-        <div className="game-content h-full">
+        <div className="game-content h-[100dvh]">
           {showWakeUp && !connected ? (
             <WakeUpScreen />
           ) : roomId ? (
